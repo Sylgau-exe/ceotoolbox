@@ -491,47 +491,116 @@ function infoCard(emoji,label,value,sub,bg){
 function buildInfog(){
   if(!R)return;
   var today=new Date().toISOString().slice(0,10);
-  var arrow='<div style="text-align:center;font-size:22px;color:#5B7A9D;margin:10px 0">▼</div>';
+  var NAVY='#1E3A5F',STEEL='#5B7A9D',AMBER='#D9A441',GREEN='#2F7D52',INK='#22303F',MUT='#64748B',LINE='#E2E8F0';
+
+  // ---- seat map: dot grid, filled share = occupancy ----
+  function seatMap(){
+    var cols=20,rows=7,total=cols*rows,filled=Math.round(A.occupancy*total);
+    var s='<svg viewBox="0 0 320 132" style="width:100%">';
+    s+='<path d="M8 14 Q160 -8 312 14" fill="none" stroke="'+STEEL+'" stroke-width="2.5"/>';
+    s+='<text x="160" y="10" text-anchor="middle" font-size="8.5" fill="'+STEEL+'" font-weight="700" letter-spacing="1">STAGE</text>';
+    for(var i=0;i<total;i++){
+      var r=Math.floor(i/cols),c=i%cols;
+      var x=14+c*15.5,y=30+r*14+(Math.abs(c-9.5)<5?0:2);
+      var on=i<filled;
+      s+='<circle cx="'+x+'" cy="'+y+'" r="4.4" fill="'+(on?AMBER:'#EDF2F8')+'" stroke="'+(on?'#B58121':LINE)+'" stroke-width="1"/>';
+    }
+    s+='</svg>';
+    return s;
+  }
+  // ---- price waterfall: market ref -> positioning -> gross -> net ----
+  function waterfall(){
+    var ref=R.weightedRef,gross=R.grossTicket,net=R.netTicket;
+    var max=Math.max(ref,gross,net)*1.15,W=300,H=120,bw=62;
+    function bar(x,v,col,lab,sub){
+      var h=(v/max)*(H-38),y=H-20-h;
+      return '<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+h+'" rx="4" fill="'+col+'"/>'
+        +'<text x="'+(x+bw/2)+'" y="'+(y-6)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="'+INK+'">'+Math.round(v/1e3)+'k</text>'
+        +'<text x="'+(x+bw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="7.5" font-weight="700" fill="'+MUT+'" letter-spacing=".5">'+lab+'</text>'
+        +(sub?'<text x="'+(x+bw/2)+'" y="'+(H+1)+'" text-anchor="middle" font-size="7" fill="'+MUT+'">'+sub+'</text>':'');
+    }
+    var s='<svg viewBox="0 0 '+W+' '+(H+6)+'" style="width:100%">';
+    s+=bar(10,ref,'#C9D6E5','MARKET REF','weighted');
+    s+=bar(118,gross,STEEL,'GROSS','×'+(A.positioning*100).toFixed(0)+'%');
+    s+=bar(226,net,AMBER,'NET','×'+(A.netRealization*100).toFixed(0)+'%');
+    s+='<path d="M76 46 h38 M184 52 h38" stroke="'+MUT+'" stroke-width="1.5" marker-end="none"/>';
+    s+='</svg>';
+    return s;
+  }
+  // ---- discipline bar: max investment vs $52M quote ----
+  function disciplineBar(){
+    var inv=R.maxInvestmentUSD/1e6,quote=52,W=560,bh=26;
+    var wq=W-80,wi=Math.max((inv/quote)*wq,30);
+    var s='<svg viewBox="0 0 '+(W+10)+' 96" style="width:100%">';
+    s+='<rect x="0" y="8" width="'+wq+'" height="'+bh+'" rx="6" fill="#F3E3E2" stroke="#E4BDB9"/>';
+    s+='<text x="8" y="25" font-size="10" font-weight="800" fill="#B3403A">US$52M — THE ALL-IN VENDOR QUOTE</text>';
+    s+='<rect x="0" y="52" width="'+wi+'" height="'+bh+'" rx="6" fill="'+GREEN+'"/>';
+    s+='<text x="'+(wi+10)+'" y="69" font-size="10.5" font-weight="800" fill="'+GREEN+'">US$'+inv.toFixed(1)+'M — WHAT THIS MARKET CAN PAY BACK</text>';
+    s+='<text x="'+(wq-2)+'" y="47" text-anchor="end" font-size="8.5" fill="'+MUT+'">'+(quote/inv).toFixed(1)+'× smaller — that is the discipline</text>';
+    s+='</svg>';
+    return s;
+  }
+  // ---- small stroke icons ----
+  function ic(path){return '<svg viewBox="0 0 24 24" style="width:19px;height:19px;vertical-align:-4px;margin-right:7px"><g fill="none" stroke="'+AMBER+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+path+'</g></svg>';}
+  var icCal=ic('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>');
+  var icTicket=ic('<path d="M4 8a2 2 0 002-2h12a2 2 0 002 2v2a2.5 2.5 0 000 4v2a2 2 0 00-2 2H6a2 2 0 00-2-2v-2a2.5 2.5 0 000-4z"/><path d="M13 6v2m0 3v2m0 3v2"/>');
+  var icGauge=ic('<path d="M12 20a8 8 0 10-8-8"/><path d="M12 12l4-4"/><circle cx="12" cy="12" r="1.6"/>');
+  var icBank=ic('<path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>');
+
+  function panel(inner,extra){return '<div style="flex:1;min-width:236px;background:#fff;border:1px solid '+LINE+';border-radius:14px;padding:16px 17px;'+(extra||'')+'">'+inner+'</div>';}
+  function plabel(icon,t){return '<div style="font-size:10px;font-weight:800;letter-spacing:1.1px;color:'+STEEL+';margin-bottom:8px">'+icon+t+'</div>';}
+
   document.getElementById('infog').innerHTML=
-   '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1E3A5F;padding-bottom:12px">'
-   +'<div>'+(projectName?('<div style="font-size:11px;font-weight:800;letter-spacing:1.2px;color:#5B7A9D">📁 '+decodeURIComponent(projectName).toUpperCase()+'</div>'):'')
-   +'<div style="font-size:23px;font-weight:800;color:#1E3A5F;margin-top:2px">'+city+' — Show Investment at a Glance</div>'
-   +'<div style="font-size:11.5px;color:#64748B;margin-top:3px">Vietnam Market Business Model · '+today+'</div></div>'
-   +'<span style="font-size:10px;font-weight:800;letter-spacing:1.2px;color:#8A5A00;background:#FBF3E1;border:1px solid #EAD9AE;border-radius:99px;padding:4px 11px">CONFIDENTIAL</span></div>'
-   // levers row
-   +'<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#5B7A9D;margin:18px 0 9px">1 · THE CEO\'S LEVERS</div>'
-   +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
-   +infoCard('🎭','THEATER',A.seats.toLocaleString('en-US'),'seats')
-   +infoCard('🗓️','SHOWS',A.shows+'/yr','≈ '+(A.shows/52).toFixed(1)+' per week')
-   +infoCard('👥','OCCUPANCY',(A.occupancy*100).toFixed(0)+'%','commitment')
-   +infoCard('🎟️','NET TICKET',Math.round(R.netTicket/1e3)+'k ₫','US$'+(R.netTicket/A.fx).toFixed(1)+' · '+(A.positioning*100).toFixed(0)+'% of market')
+   // ======= header: navy band with curtain arcs =======
+   '<div style="position:relative;background:linear-gradient(135deg,#16304F,#1E3A5F 60%,#2A4A73);border-radius:14px;padding:24px 26px;color:#fff;overflow:hidden">'
+   +'<svg viewBox="0 0 900 120" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;opacity:.14"><path d="M0 0 Q120 95 240 0M240 0 Q360 95 480 0M480 0 Q600 95 720 0M720 0 Q840 95 960 0" stroke="#fff" stroke-width="2" fill="none"/><path d="M0 30 Q120 125 240 30M240 30 Q360 125 480 30M480 30 Q600 125 720 30" stroke="'+AMBER+'" stroke-width="1.5" fill="none"/></svg>'
+   +'<div style="position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'
+   +'<div>'+(projectName?('<div style="font-size:10.5px;font-weight:800;letter-spacing:1.6px;color:'+AMBER+'">'+decodeURIComponent(projectName).toUpperCase()+'</div>'):'')
+   +'<div style="font-size:30px;font-weight:800;letter-spacing:-.5px;margin-top:3px">'+city+'</div>'
+   +'<div style="font-size:12px;color:#B9C7D8;margin-top:2px">Show Investment Blueprint · Vietnam Market Business Model · '+today+'</div></div>'
+   +'<span style="font-size:9.5px;font-weight:800;letter-spacing:1.4px;color:'+AMBER+';border:1.5px solid '+AMBER+';border-radius:99px;padding:5px 12px;align-self:flex-start">CONFIDENTIAL</span></div></div>'
+
+   // ======= row: seat map · calendar · waterfall =======
+   +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px">'
+   +panel(plabel('','THE HOUSE — '+A.seats.toLocaleString('en-US')+' SEATS')+seatMap()
+     +'<div style="display:flex;justify-content:space-between;font-size:10.5px;color:'+MUT+';margin-top:6px"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+AMBER+';margin-right:4px"></span>'+(A.occupancy*100).toFixed(0)+'% occupancy commitment</span><span>'+Math.round(R.attendance/1000)+'K guests/yr</span></div>','flex:1.25')
+   +panel(plabel(icCal,'THE CALENDAR')
+     +'<div style="font-size:33px;font-weight:800;color:'+NAVY+'">'+(A.shows/52).toFixed(1)+'<span style="font-size:14px;color:'+MUT+';font-weight:600"> shows/week</span></div>'
+     +'<div style="font-size:11.5px;color:'+MUT+';margin-top:3px">'+A.shows+' performances a year</div>'
+     +'<div style="margin-top:12px;border-top:1px dashed '+LINE+';padding-top:10px">'+plabel(icGauge,'BOARD REQUIREMENTS')
+     +'<div style="font-size:13px;color:'+INK+';line-height:1.7"><b>'+(A.margin*100).toFixed(0)+'%</b> required margin<br><b>'+A.paybackYears+' years</b> payback · ROI '+(R.impliedROI*100).toFixed(0)+'%/yr</div></div>')
+   +panel(plabel(icTicket,'ONE TICKET, HONESTLY NETTED')+waterfall()
+     +'<div style="font-size:10.5px;color:'+MUT+';margin-top:4px;text-align:center">net '+Math.round(R.netTicket/1e3)+'k ₫ ≈ US$'+(R.netTicket/A.fx).toFixed(1)+' · FX '+A.fx.toLocaleString('en-US')+'</div>')
    +'</div>'
-   +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'
-   +infoCard('⏳','PAYBACK',A.paybackYears+' yrs','board requirement','#FBF3E1')
-   +infoCard('📈','MARGIN',(A.margin*100).toFixed(0)+'%','required profit','#FBF3E1')
-   +infoCard('💱','FX',(A.fx/1000).toFixed(1)+'k','₫ per US$','#FBF3E1')
+
+   // ======= revenue beam =======
+   +'<div style="position:relative;margin-top:14px;background:'+NAVY+';border-radius:14px;padding:20px 26px;color:#fff;text-align:center;overflow:hidden">'
+   +'<svg viewBox="0 0 900 90" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;opacity:.18"><path d="M450 90 L330 0h240z" fill="'+AMBER+'"/><path d="M450 90 L150 0h130zM450 90 L620 0h130z" fill="#fff" opacity=".5"/></svg>'
+   +'<div style="position:relative"><div style="font-size:10px;letter-spacing:1.4px;color:#B9C7D8;font-weight:700">TICKET REVENUE — SEATS × SHOWS × OCCUPANCY × NET TICKET</div>'
+   +'<div style="font-size:36px;font-weight:800;margin-top:3px">US$'+(R.revenueUSD/1e6).toFixed(1)+'M<span style="font-size:15px;font-weight:600;color:#C9D6E5"> / year</span></div>'
+   +'<div style="font-size:10.5px;color:#B9C7D8;margin-top:2px">tickets only — sponsorship, F&B and merchandising stay in phase 2</div></div></div>'
+
+   // ======= the two gates =======
+   +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px">'
+   +'<div style="flex:1;min-width:250px;background:linear-gradient(180deg,#F6FBF7,#EEF7F1);border:2px solid '+GREEN+';border-radius:14px;padding:18px 20px">'
+   +plabel(icBank,'GATE 1 · OPERATING COST CEILING')
+   +'<div style="font-size:29px;font-weight:800;color:'+NAVY+'">US$'+(R.opexCeilingUSD/1e6).toFixed(1)+'M<span style="font-size:14px;color:'+MUT+';font-weight:600">/yr</span></div>'
+   +'<div style="font-size:11.5px;color:'+MUT+';margin-top:4px">Every year, for ten years, the show must run below this line.</div></div>'
+   +'<div style="flex:1;min-width:250px;background:linear-gradient(180deg,#F6FBF7,#EEF7F1);border:2px solid '+GREEN+';border-radius:14px;padding:18px 20px">'
+   +plabel(icBank,'GATE 2 · MAX PRODUCTION INVESTMENT')
+   +'<div style="font-size:29px;font-weight:800;color:'+NAVY+'">US$'+(R.maxInvestmentUSD/1e6).toFixed(1)+'M</div>'
+   +'<div style="font-size:11.5px;color:'+MUT+';margin-top:4px">The one-time budget cap — required profit × payback years.</div></div>'
    +'</div>'
-   +arrow
-   // engine
-   +'<div style="background:#1E3A5F;border-radius:14px;padding:20px 24px;color:#fff;text-align:center">'
-   +'<div style="font-size:10.5px;letter-spacing:1px;color:#B9C7D8">2 · REVENUE ENGINE — TICKETS ONLY · '+Math.round(R.attendance/1000)+'K GUESTS/YR</div>'
-   +'<div style="font-size:31px;font-weight:800;margin-top:5px">☀️ US$'+(R.revenueUSD/1e6).toFixed(1)+'M / year</div>'
-   +'<div style="font-size:11px;color:#B9C7D8;margin-top:4px">sponsorship · F&B · merchandising kept separate (phase 2)</div></div>'
-   +arrow
-   // constraints
-   +'<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#5B7A9D;margin:0 0 9px">3 · THE TWO BOUNDARIES EVERY VENDOR RECEIVES</div>'
-   +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
-   +'<div style="flex:1;min-width:220px;background:#F1F7F3;border:2px solid #2F7D52;border-radius:14px;padding:18px;text-align:center">'
-   +icoChip('🏃','#E7F2EB')+'<div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#2F7D52">YEARLY OPERATING COST CEILING</div>'
-   +'<div style="font-size:26px;font-weight:800;color:#1E3A5F;margin-top:4px">US$'+(R.opexCeilingUSD/1e6).toFixed(1)+'M/yr</div>'
-   +'<div style="font-size:11px;color:#64748B;margin-top:3px">the show must run for less than this</div></div>'
-   +'<div style="flex:1;min-width:220px;background:#F1F7F3;border:2px solid #2F7D52;border-radius:14px;padding:18px;text-align:center">'
-   +icoChip('🏗️','#E7F2EB')+'<div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#2F7D52">MAX PRODUCTION INVESTMENT</div>'
-   +'<div style="font-size:26px;font-weight:800;color:#1E3A5F;margin-top:4px">US$'+(R.maxInvestmentUSD/1e6).toFixed(1)+'M</div>'
-   +'<div style="font-size:11px;color:#64748B;margin-top:3px">one-time production budget cap</div></div>'
-   +'</div>'
-   +'<div style="margin-top:16px;border:1.5px solid #1E3A5F;border-radius:11px;padding:11px;text-align:center;font-weight:800;color:#1E3A5F;font-size:13px">🤝 VENDORS DESIGN INSIDE THE BOUNDARIES</div>'
-   +'<div style="margin-top:14px;font-size:10px;color:#8A98A8;border-top:1px solid #E2E8F0;padding-top:8px">How to read: the CEO fixes the levers (1), the engine turns them into ticket revenue (2), and the board\'s requirements convert revenue into the two boundaries (3) that cap what any vendor may propose. Sun Group Entertainment (GSM) · CEO Toolbox — Panda Projet Inc.</div>';
+
+   // ======= discipline bar =======
+   +'<div style="margin-top:14px;background:#fff;border:1px solid '+LINE+';border-radius:14px;padding:16px 20px">'
+   +plabel('','WHY THE GATES MATTER')
+   +disciplineBar()+'</div>'
+
+   // ======= footer =======
+   +'<div style="margin-top:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;border-top:2.5px solid '+NAVY+';padding-top:10px">'
+   +'<div style="font-size:12px;font-weight:800;color:'+NAVY+'">VENDORS DESIGN INSIDE THE BOUNDARIES — Cirque du Soleil · Dragone · others</div>'
+   +'<div style="font-size:9.5px;color:#8A98A8">Sun Group Entertainment (GSM) · CEO Toolbox · Panda Projet Inc. · sources per Market Intelligence base</div></div>';
 }
 function openInfog(){buildInfog();document.getElementById('infogWrap').style.display='block';}
 function closeInfog(){document.getElementById('infogWrap').style.display='none';document.body.classList.remove('infoprint');}
