@@ -94,6 +94,11 @@
   @media print{
     body *{visibility:hidden}
     #sheet,#sheet *{visibility:visible}
+    body.infoprint #sheet,body.infoprint #sheet *{visibility:hidden;display:none}
+    body.infoprint #infogWrap{visibility:visible;position:absolute;inset:auto;left:0;top:0;width:100%;background:none;padding:0;overflow:visible}
+    body.infoprint #infog,body.infoprint #infog *{visibility:visible}
+    body.infoprint #infog{max-width:100%;border-radius:0;padding:20px}
+    body.infoprint #infogBtns{display:none!important}
     #sheet{display:block;position:absolute;left:0;top:0;width:100%;padding:34px;font-size:12.5px}
     #sheet h1{font-size:22px;color:#1E3A5F}
     #sheet .shead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2.5px solid #1E3A5F;padding-bottom:10px}
@@ -199,6 +204,7 @@
         <button class="btn" onclick="printSheet()">Print Concept Constraint Sheet</button>
         <button class="btn ghost" onclick="saveScenario()">Save scenario</button>
         <button class="btn ghost" onclick="loadScenarios()">My scenarios</button>
+        <button class="btn ghost" onclick="openInfog()">🖼 View infographic</button>
       </div>
       <div id="scenList"></div>
     </div>
@@ -216,6 +222,13 @@
   <div class="cinput">
     <textarea id="cin" placeholder="Ask the coach…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();coachSend();}"></textarea>
     <button id="csend" onclick="coachSend()">→</button>
+  </div>
+</div>
+<div id="infogWrap" style="position:fixed;inset:0;background:rgba(10,25,47,.6);display:none;z-index:57;overflow:auto;padding:26px">
+  <div id="infog" style="max-width:900px;margin:0 auto;background:#fff;border-radius:16px;padding:34px 38px"></div>
+  <div id="infogBtns" style="max-width:900px;margin:14px auto 0;display:flex;gap:10px;justify-content:flex-end">
+    <button class="btn ghost" style="background:#fff" onclick="closeInfog()">Close</button>
+    <button class="btn" onclick="printInfog()">🖨 Print infographic</button>
   </div>
 </div>
 <div id="saveModal" style="position:fixed;inset:0;background:rgba(10,25,47,.55);display:none;align-items:center;justify-content:center;z-index:58;padding:20px">
@@ -465,6 +478,64 @@ function syncControls(){
   document.getElementById('payback').value=A.paybackYears;
   document.getElementById('margin').value=Math.round(A.margin*100);
 }
+
+
+// ---------------- Infographic ----------------
+function icoChip(emoji,bg){return '<div style="width:52px;height:52px;border-radius:14px;background:'+(bg||'#EDF2F8')+';display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 8px">'+emoji+'</div>';}
+function infoCard(emoji,label,value,sub,bg){
+  return '<div style="flex:1;min-width:118px;background:#F7F9FB;border:1px solid #E2E8F0;border-radius:13px;padding:15px 10px;text-align:center">'
+   +icoChip(emoji,bg)+'<div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#5B7A9D">'+label+'</div>'
+   +'<div style="font-size:19px;font-weight:800;color:#1E3A5F;margin-top:3px">'+value+'</div>'
+   +(sub?'<div style="font-size:10.5px;color:#64748B;margin-top:2px">'+sub+'</div>':'')+'</div>';
+}
+function buildInfog(){
+  if(!R)return;
+  var today=new Date().toISOString().slice(0,10);
+  var arrow='<div style="text-align:center;font-size:22px;color:#5B7A9D;margin:10px 0">▼</div>';
+  document.getElementById('infog').innerHTML=
+   '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1E3A5F;padding-bottom:12px">'
+   +'<div>'+(projectName?('<div style="font-size:11px;font-weight:800;letter-spacing:1.2px;color:#5B7A9D">📁 '+decodeURIComponent(projectName).toUpperCase()+'</div>'):'')
+   +'<div style="font-size:23px;font-weight:800;color:#1E3A5F;margin-top:2px">'+city+' — Show Investment at a Glance</div>'
+   +'<div style="font-size:11.5px;color:#64748B;margin-top:3px">Vietnam Market Business Model · '+today+'</div></div>'
+   +'<span style="font-size:10px;font-weight:800;letter-spacing:1.2px;color:#8A5A00;background:#FBF3E1;border:1px solid #EAD9AE;border-radius:99px;padding:4px 11px">CONFIDENTIAL</span></div>'
+   // levers row
+   +'<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#5B7A9D;margin:18px 0 9px">1 · THE CEO\'S LEVERS</div>'
+   +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+   +infoCard('🎭','THEATER',A.seats.toLocaleString('en-US'),'seats')
+   +infoCard('🗓️','SHOWS',A.shows+'/yr','≈ '+(A.shows/52).toFixed(1)+' per week')
+   +infoCard('👥','OCCUPANCY',(A.occupancy*100).toFixed(0)+'%','commitment')
+   +infoCard('🎟️','NET TICKET',Math.round(R.netTicket/1e3)+'k ₫','US$'+(R.netTicket/A.fx).toFixed(1)+' · '+(A.positioning*100).toFixed(0)+'% of market')
+   +'</div>'
+   +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'
+   +infoCard('⏳','PAYBACK',A.paybackYears+' yrs','board requirement','#FBF3E1')
+   +infoCard('📈','MARGIN',(A.margin*100).toFixed(0)+'%','required profit','#FBF3E1')
+   +infoCard('💱','FX',(A.fx/1000).toFixed(1)+'k','₫ per US$','#FBF3E1')
+   +'</div>'
+   +arrow
+   // engine
+   +'<div style="background:#1E3A5F;border-radius:14px;padding:20px 24px;color:#fff;text-align:center">'
+   +'<div style="font-size:10.5px;letter-spacing:1px;color:#B9C7D8">2 · REVENUE ENGINE — TICKETS ONLY · '+Math.round(R.attendance/1000)+'K GUESTS/YR</div>'
+   +'<div style="font-size:31px;font-weight:800;margin-top:5px">☀️ US$'+(R.revenueUSD/1e6).toFixed(1)+'M / year</div>'
+   +'<div style="font-size:11px;color:#B9C7D8;margin-top:4px">sponsorship · F&B · merchandising kept separate (phase 2)</div></div>'
+   +arrow
+   // constraints
+   +'<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#5B7A9D;margin:0 0 9px">3 · THE TWO BOUNDARIES EVERY VENDOR RECEIVES</div>'
+   +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
+   +'<div style="flex:1;min-width:220px;background:#F1F7F3;border:2px solid #2F7D52;border-radius:14px;padding:18px;text-align:center">'
+   +icoChip('🏃','#E7F2EB')+'<div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#2F7D52">YEARLY OPERATING COST CEILING</div>'
+   +'<div style="font-size:26px;font-weight:800;color:#1E3A5F;margin-top:4px">US$'+(R.opexCeilingUSD/1e6).toFixed(1)+'M/yr</div>'
+   +'<div style="font-size:11px;color:#64748B;margin-top:3px">the show must run for less than this</div></div>'
+   +'<div style="flex:1;min-width:220px;background:#F1F7F3;border:2px solid #2F7D52;border-radius:14px;padding:18px;text-align:center">'
+   +icoChip('🏗️','#E7F2EB')+'<div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#2F7D52">MAX PRODUCTION INVESTMENT</div>'
+   +'<div style="font-size:26px;font-weight:800;color:#1E3A5F;margin-top:4px">US$'+(R.maxInvestmentUSD/1e6).toFixed(1)+'M</div>'
+   +'<div style="font-size:11px;color:#64748B;margin-top:3px">one-time production budget cap</div></div>'
+   +'</div>'
+   +'<div style="margin-top:16px;border:1.5px solid #1E3A5F;border-radius:11px;padding:11px;text-align:center;font-weight:800;color:#1E3A5F;font-size:13px">🤝 VENDORS DESIGN INSIDE THE BOUNDARIES</div>'
+   +'<div style="margin-top:14px;font-size:10px;color:#8A98A8;border-top:1px solid #E2E8F0;padding-top:8px">How to read: the CEO fixes the levers (1), the engine turns them into ticket revenue (2), and the board\'s requirements convert revenue into the two boundaries (3) that cap what any vendor may propose. Sun Group Entertainment (GSM) · CEO Toolbox — Panda Projet Inc.</div>';
+}
+function openInfog(){buildInfog();document.getElementById('infogWrap').style.display='block';}
+function closeInfog(){document.getElementById('infogWrap').style.display='none';document.body.classList.remove('infoprint');}
+function printInfog(){buildInfog();document.body.classList.add('infoprint');window.print();setTimeout(function(){document.body.classList.remove('infoprint')},500);}
 
 // ---- Concept Constraint Sheet (print) ----
 function buildSheet(){
