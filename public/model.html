@@ -111,6 +111,7 @@
           <thead><tr><th>Competitive reference</th><th style="text-align:right">Weight</th><th style="text-align:right">Gross ticket (VND)</th></tr></thead>
           <tbody></tbody>
         </table>
+        <div style="font-size:11px;color:#8A98A8;margin-top:8px">Default weights reflect each reference's relevance to the selected city — edit freely; they auto-normalize.</div>
         <label class="slab">Positioning vs market <span class="v" id="posV"></span></label>
         <input type="range" id="pos" min="70" max="125" step="0.5" oninput="recalc()">
         <label class="slab">Net realization (commissions, discounting) <span class="v" id="netrV"></span></label>
@@ -210,6 +211,19 @@ var A={
   paybackYears:5, margin:0.15
 };
 var SEAT_OPTS=[800,1000,1200,1500,2000,2500,3000,3500];
+// Default competitive weights per city — reflect proximity/relevance of each reference.
+// Editable in the UI; v2-validated set = Ho Chi Minh City.
+var CITY_WEIGHTS={
+  'Ho Chi Minh City':{ticket_aoshow:0.40,ticket_hoian_memories:0.25,ticket_tinh_hoa_bac_bo:0.20,ticket_kiss_of_the_sea:0.15},
+  'Da Nang':{ticket_hoian_memories:0.45,ticket_aoshow:0.20,ticket_kiss_of_the_sea:0.20,ticket_tinh_hoa_bac_bo:0.15},
+  'Hanoi':{ticket_tinh_hoa_bac_bo:0.45,ticket_hoian_memories:0.25,ticket_aoshow:0.20,ticket_kiss_of_the_sea:0.10},
+  'Nha Trang':{ticket_kiss_of_the_sea:0.30,ticket_hoian_memories:0.30,ticket_aoshow:0.25,ticket_tinh_hoa_bac_bo:0.15},
+  'Phu Quoc':{ticket_kiss_of_the_sea:0.50,ticket_hoian_memories:0.20,ticket_aoshow:0.20,ticket_tinh_hoa_bac_bo:0.10}
+};
+function applyCityWeights(){
+  var w=CITY_WEIGHTS[city]||CITY_WEIGHTS['Ho Chi Minh City'];
+  A.competitors.forEach(function(c){if(w[c.key]!=null)c.weight=w[c.key];});
+}
 
 /* ===================== ENGINE-START =====================
    v2 logic — driven by the CEO's answers, tickets only.   */
@@ -244,13 +258,13 @@ function renderCity(){
   }).join('');
   document.getElementById('dashLink').href='dashboard.html?city='+encodeURIComponent(city);
 }
-function setCity(c){city=c;renderCity();loadLive();}
+function setCity(c){city=c;applyCityWeights();renderCity();renderComp();recalc();loadLive();toast('Competitive weights set to '+city+' defaults — adjust as needed.');}
 
 function renderComp(){
   var tb=document.querySelector('#compTable tbody');
   tb.innerHTML=A.competitors.map(function(c,i){
     return '<tr><td>'+c.name+'<span class="confchip c'+c.conf+'">'+c.conf+'</span></td>'
-      +'<td style="text-align:right">'+(c.weight*100).toFixed(0)+'%</td>'
+      +'<td style="text-align:right"><input type="number" min="0" max="100" step="5" value="'+(c.weight*100).toFixed(0)+'" style="width:58px" onchange="A.competitors['+i+'].weight=(Number(this.value)||0)/100;recalc()">%</td>'
       +'<td style="text-align:right"><input type="number" step="10000" value="'+c.price+'" onchange="A.competitors['+i+'].price=Number(this.value)||0;recalc()"></td></tr>';
   }).join('');
 }
@@ -407,7 +421,7 @@ function buildSheet(){
 function printSheet(){buildSheet();window.print();}
 
 // ---- init ----
-renderCity();renderComp();renderSeats();syncControls();recalc();loadLive();
+applyCityWeights();renderCity();renderComp();renderSeats();syncControls();recalc();loadLive();
 </script>
 </body>
 </html>
