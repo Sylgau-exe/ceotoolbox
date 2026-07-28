@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roadmap Concept — CEO Toolbox</title>
+<style>
+  :root{--navy:#1E3A5F;--steel:#5B7A9D;--amber:#D9A441;--ink:#22303F;--muted:#64748B;--line:#E2E8F0;--bg:#F4F6F9;--green:#2F7D52;--red:#B3403A}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--navy);color:#fff;padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+  .wordmark{font-weight:800;font-size:18px;cursor:pointer}.wordmark span{color:var(--amber)}
+  .hsub{font-size:11.5px;color:#B9C7D8;margin-left:12px;padding-left:12px;border-left:1px solid #3D577A}
+  .hright a{color:#C9D6E5;text-decoration:none;font-size:13px;margin-left:16px;cursor:pointer}.hright a:hover{color:#fff}
+  main{max-width:1000px;margin:0 auto;padding:28px}
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-bottom:14px}
+  .btn{background:var(--navy);color:#fff;border:0;border-radius:9px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none}
+  .btn.ghost{background:#fff;color:var(--navy);border:1.5px solid var(--line)}
+  #diagram{background:#fff;border:1px solid var(--line);border-radius:16px;padding:34px 38px}
+  .dhead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy);padding-bottom:12px;gap:12px}
+  .dtag{font-size:10.5px;font-weight:800;letter-spacing:1.6px;color:var(--amber)}
+  .dtitle{font-size:26px;font-weight:800;color:var(--navy);letter-spacing:-.3px;margin-top:3px}
+  .dsub{font-size:12.5px;color:var(--muted);margin-top:4px;font-style:italic}
+  .chip{font-size:9.5px;font-weight:800;letter-spacing:1.2px;color:#8A5A00;background:#FBF3E1;border:1px solid #EAD9AE;border-radius:99px;padding:4px 11px;white-space:nowrap}
+  .roadchip{font-size:9.5px;font-weight:800;letter-spacing:1.2px;color:var(--steel);background:#EDF2F8;border:1px solid #DBE5EF;border-radius:99px;padding:4px 11px;white-space:nowrap;margin-right:6px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px}
+  .box{flex:1;min-width:200px;border-radius:13px;padding:16px 18px;border:1.5px solid var(--line);background:#fff}
+  .box.blue{background:#F6F9FC;border-color:#DBE5EF}
+  .box.navy{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .box.amber{background:#FFFBF0;border-color:var(--amber)}
+  .box.green{background:#F1F7F3;border-color:#C4DECF}
+  .box.dashed{border-style:dashed;background:#FAFBFC}
+  .bnum{display:inline-block;background:#EDF2F8;color:var(--navy);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:800;margin-bottom:7px}
+  .box.navy .bnum{background:rgba(255,255,255,.15);color:#fff}
+  .btitle{font-size:13.5px;font-weight:800;color:var(--navy)}
+  .box.navy .btitle{color:#fff}
+  .box.green .btitle{color:var(--green)}
+  .box.amber .btitle{color:#8A5A00}
+  .bbody{font-size:12px;color:var(--muted);line-height:1.55;margin-top:5px}
+  .box.navy .bbody{color:#B9C7D8}
+  .arrow{text-align:center;font-size:20px;color:var(--steel);margin:6px 0}
+  .htr{margin-top:22px;border-top:1px solid var(--line);padding-top:12px}
+  .htr b{font-size:12.5px;color:var(--navy)}
+  .htr p{font-size:12px;color:var(--muted);line-height:1.6;margin-top:4px}
+  .dfoot{margin-top:16px;font-size:10px;color:#8A98A8}
+  svg text{font-family:inherit}
+  @media print{
+    body{background:#fff}
+    header,.actions{display:none!important}
+    #diagram{border:none;border-radius:0;padding:10px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center">
+    <div class="wordmark" onclick="location.href='app.html'">CEO<span>TOOLBOX</span></div>
+    <div class="hsub" id="hsub">Roadmap concept</div>
+  </div>
+  <div class="hright"><a href="app.html">Home</a><a onclick="signOut()">Sign out</a></div>
+</header>
+<main>
+  <div class="actions">
+    <a class="btn ghost" href="app.html">← Back to toolbox</a>
+    <button class="btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+  </div>
+  <div id="diagram"></div>
+</main>
+<script>
+window.onerror=function(m){console.error(m)}
+var token=localStorage.getItem('auth_token');
+if(!token){location.href='index.html';}
+function signOut(){localStorage.removeItem('auth_token');localStorage.removeItem('user');location.href='index.html';}
+var m=new URLSearchParams(location.search).get('m')||'tco';
+
+function head(tag,title,sub,phase){
+  return '<div class="dhead"><div><div class="dtag">'+tag+'</div><div class="dtitle">'+title+'</div><div class="dsub">'+sub+'</div></div>'
+   +'<div style="text-align:right"><span class="roadchip">'+phase+'</span><span class="chip">CONFIDENTIAL</span></div></div>';
+}
+function box(cls,num,title,body,extra){
+  return '<div class="box '+cls+'" '+(extra||'')+'><span class="bnum">'+num+'</span><div class="btitle">'+title+'</div><div class="bbody">'+body+'</div></div>';
+}
+function howto(t){return '<div class="htr"><b>How to read it</b><p>'+t+'</p></div>';}
+var foot='<div class="dfoot">CEO Toolbox — GSM Decision Platform · Sun Group Entertainment (GSM) · Concept architecture for future development · Panda Projet Inc. · Draft July 2026</div>';
+
+var DIAGRAMS={
+// ============================== TCO ==============================
+tco: head('CEO TOOLBOX — FUTURE MODULE','TCO / Lifecycle Costing','The whole truth about what a concept costs — before a contract is signed','ROADMAP · AFTER PORTFOLIO')
+ +'<div class="row">'
+ +box('blue','1','WHAT THE VENDOR SHOWS','The production quote — creation, staging, opening. The number on the contract\'s first page. Historically ~40–60% of the real cost.')
+ +box('blue','2','WHAT THE VENDOR DOESN\'T','10 years of operations: cast &amp; crew, maintenance, energy, insurance, marketing, royalties · creative refresh every 3–4 years · equipment refurbishment · closing / end-of-life costs.')
+ +'</div>'
+ +'<div class="arrow">▼</div>'
+ +box('navy','3','THE TCO ENGINE','One structured model per concept: production + 10-year operations + refresh cycles + exit — inflation-adjusted (indicators from Market Intelligence feed inflation &amp; FX automatically). Output: <b style="color:#fff">total cost of ownership over 10 years</b>, per year and per ticket sold.')
+ +'<div class="arrow">▼</div>'
+ +'<div class="row">'
+ +box('green','4','TESTED AGAINST THE GATES','TCO/yr must fit under Gate 1 (operating ceiling). Production share must fit under Gate 2 (max investment). Same boundaries, deeper truth.')
+ +box('amber','5','THE DECISION VIEW','Side-by-side TCO of competing concepts — sticker price vs 10-year truth. A cheaper build with expensive operations loses to a dearer build that runs lean.')
+ +'</div>'
+ +howto('The vendor\'s quote (1) is only part of the picture; the module adds everything the quote omits (2) into one lifecycle engine (3). Every concept is then re-tested against the same two gates the Business Model produces (4), and leadership compares concepts on the 10-year truth, not the opening-night price (5).')
+ +foot,
+
+// ============================== CASH ==============================
+cash: head('CEO TOOLBOX — FUTURE MODULE','Cash-to-Cash Model','When money leaves, when it comes back — breakeven visible before opening night','ROADMAP · CASH FLOW IS KEY')
+ +'<div class="row">'
+ +box('blue','1','CASH OUT — THE SPEND CURVE','Production spend by month (S-curve, 18–24 months) · pre-opening marketing · working capital &amp; deposits · vendor payment milestones tied to gates, not dates.')
+ +box('blue','2','CASH IN — THE REVENUE RAMP','Presales opening month −6 · OTA &amp; tour-operator contracts · ticket ramp-up curve (conservative until proven) · phase-2 revenue (sponsorship, F&amp;B) layered later.')
+ +'</div>'
+ +'<div class="arrow">▼</div>'
+ +box('navy','3','THE CASH ENGINE','Month-by-month cumulative cash position from first contract to year 3. The curve\'s lowest point = peak funding need. Where it crosses zero = true breakeven. FX exposure (VND/USD) marked on every USD-denominated outflow.')
+ +'<div class="arrow">▼</div>'
+ +'<div class="row">'
+ +box('green','4','GATE: BREAKEVEN AT OPENING','The discipline: presales + committed revenue must cover year-one operating cash before opening night. If the curve says otherwise, the opening moves or the spend does.')
+ +box('amber','5','THE CEO VIEW','One chart for the board: the cash curve with peak need, breakeven date and three scenarios (base / slow ramp / strong presales). No surprises after signature.')
+ +'</div>'
+ +howto('Spending (1) and revenue (2) each get an honest monthly curve; the engine (3) merges them into one cumulative cash line. The breakeven-at-opening gate (4) is the go/no-go test, and leadership steers with the one-chart view (5). Built on the same platform — projects and scenarios flow straight in from the Business Model.')
+ +foot,
+
+// ============================== DASHBOARD ==============================
+dashboard: head('CEO TOOLBOX — FUTURE MODULE','Company Dashboard','Operational &amp; project status across the GSM portfolio — one page for the executive team','ROADMAP · WHEN OPERATIONS SCALE')
+ +'<div class="row">'
+ +box('blue','1','EVERY SHOW REPORTS','Weekly per venue: occupancy vs commitment · ticket revenue vs model · operating burn vs Gate 1 · guest satisfaction. Numbers enter once, at the source.')
+ +box('blue','2','EVERY PROJECT REPORTS','Per project: gate status · spend vs curve (from Cash-to-Cash) · milestone health · vendor commitments vs CDA check. Straight from the tools the teams already use.')
+ +'</div>'
+ +'<div class="arrow">▼</div>'
+ +box('navy','3','ONE DATA LAYER','The same Neon base behind every module — indicators, projects, scenarios, portfolio, operations. No copy-paste reporting; the dashboard reads what the tools already know.')
+ +'<div class="arrow">▼</div>'
+ +'<div class="row">'
+ +box('green','4','THE CEO PAGE','Portfolio on one screen: every show\'s occupancy &amp; revenue trend, every project\'s gate &amp; cash position, exceptions first. Fresh badges — nothing ages silently, same rule as Market Intelligence.')
+ +box('amber','5','THE BOARD VIEW','A printable monthly pack generated from live data: performance vs the constraint sheets the board approved. The loop closes — promises made in the model are tracked in operations.')
+ +'</div>'
+ +howto('Shows (1) and projects (2) feed one shared data layer (3) — the same base the whole toolbox runs on. The CEO works from the exceptions-first page (4); the board gets the same truth in a printable pack (5). The strategic loop closes: model → constraints → vendors → operations → back to the model.')
+ +foot
+};
+var TITLES={tco:'TCO / Lifecycle Costing',cash:'Cash-to-Cash Model',dashboard:'Company Dashboard'};
+document.getElementById('diagram').innerHTML=DIAGRAMS[m]||DIAGRAMS.tco;
+document.getElementById('hsub').textContent='Roadmap concept — '+(TITLES[m]||'TCO');
+document.title=(TITLES[m]||'Roadmap')+' — CEO Toolbox';
+</script>
+</body>
+</html>
