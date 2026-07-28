@@ -218,6 +218,19 @@
     <button id="csend" onclick="coachSend()">→</button>
   </div>
 </div>
+<div id="saveModal" style="position:fixed;inset:0;background:rgba(10,25,47,.55);display:none;align-items:center;justify-content:center;z-index:58;padding:20px">
+  <div style="background:#fff;border-radius:14px;padding:24px;max-width:400px;width:100%">
+    <h3 style="color:var(--navy);margin-bottom:14px">Save scenario</h3>
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 4px">Name</label>
+    <input id="sv_name" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px">
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 4px">Save to project</label>
+    <select id="sv_proj" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff"></select>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+      <button class="btn ghost" onclick="document.getElementById('saveModal').style.display='none'">Cancel</button>
+      <button class="btn" onclick="confirmSave()">Save</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- ============ PRINT-ONLY: CONCEPT CONSTRAINT SHEET ============ -->
@@ -402,14 +415,25 @@ async function loadLive(){
 }
 
 // ---- Scenarios ----
-async function saveScenario(){
-  var name=prompt('Scenario name:',city+' — '+A.seats+' seats · '+A.shows+' shows');
-  if(!name)return;
+function saveScenario(){
+  document.getElementById('sv_name').value=city+' — '+A.seats.toLocaleString('en-US')+' seats · '+A.shows+' shows';
+  var sel=document.getElementById('sv_proj');
+  sel.innerHTML='<option value="">— No project (free exploration)</option>'+PROJECTS.map(function(p){
+    return '<option value="'+p.id+'"'+(p.id===projectId?' selected':'')+'>'+p.name+(p.code?' ['+p.code+']':'')+' · '+p.city+'</option>';
+  }).join('');
+  document.getElementById('saveModal').style.display='flex';
+}
+async function confirmSave(){
+  var name=document.getElementById('sv_name').value.trim();
+  if(!name){toast('Give the scenario a name.');return;}
+  var pid=Number(document.getElementById('sv_proj').value)||null;
   try{
     var r=await fetch('/api/scenarios',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
-      body:JSON.stringify({city:city,name:name,project_id:projectId,inputs:A,outputs:{revenueUSD:R.revenueUSD,opexCeilingUSD:R.opexCeilingUSD,maxInvestmentUSD:R.maxInvestmentUSD,netTicket:R.netTicket}})});
+      body:JSON.stringify({city:city,name:name,project_id:pid,inputs:A,outputs:{revenueUSD:R.revenueUSD,opexCeilingUSD:R.opexCeilingUSD,maxInvestmentUSD:R.maxInvestmentUSD,netTicket:R.netTicket}})});
     if(!r.ok)throw new Error((await r.json()).error||r.status);
-    toast('Scenario saved.');
+    document.getElementById('saveModal').style.display='none';
+    var pn=pid?(PROJECTS.find(function(p){return p.id===pid})||{}).name:null;
+    toast('Scenario saved'+(pn?(' to '+pn):'')+'.');
   }catch(e){toast('Save failed: '+e.message);}
 }
 async function loadScenarios(){
@@ -420,8 +444,9 @@ async function loadScenarios(){
     if(!data.scenarios||!data.scenarios.length){el.innerHTML='<div style="margin-top:14px;color:#8A98A8;font-size:13px">No saved scenarios yet'+(projectId?' for this project':'')+'.</div>';return;}
     el.innerHTML='<div class="panel" style="margin-top:16px"><div class="ptitle"><span>SAVED SCENARIOS</span></div>'+data.scenarios.map(function(s){
       var o=s.outputs||{};
+      var ptag='';if(s.project_id){var pp=PROJECTS.find(function(x){return x.id===s.project_id});if(pp)ptag=' <span style="font-size:10px;font-weight:800;background:#EDF2F8;color:#5B7A9D;border-radius:5px;padding:1px 6px">'+(pp.code||pp.name)+'</span>';}
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #F0F3F7;font-size:13px">'
-        +'<span><b>'+s.name+'</b> · '+s.city+'</span>'
+        +'<span><b>'+s.name+'</b>'+ptag+' · '+s.city+'</span>'
         +'<span style="color:#64748B">'+(o.maxInvestmentUSD?('max inv '+fmtUSD(o.maxInvestmentUSD)):'')
         +' &nbsp;<a style="color:#5B7A9D;cursor:pointer;font-weight:700" onclick=\'applyScenario('+JSON.stringify(s.inputs).replace(/'/g,"&#39;")+',"'+s.city.replace(/"/g,'')+'")\'>load</a></span></div>';
     }).join('')+'</div>';
@@ -446,7 +471,9 @@ function buildSheet(){
   if(!R)return;
   var today=new Date().toISOString().slice(0,10);
   document.getElementById('sheet').innerHTML=
-   '<div class="shead"><div><h1>Concept Constraint Sheet — '+city+'</h1>'
+   '<div class="shead"><div>'
+   +(projectName?('<div style="font-size:11px;font-weight:800;letter-spacing:1.2px;color:#5B7A9D;margin-bottom:4px">PROJECT: '+decodeURIComponent(projectName).toUpperCase()+'</div>'):'')
+   +'<h1>Concept Constraint Sheet — '+city+'</h1>'
    +'<div style="color:#64748B;font-size:12px;margin-top:4px">Vietnam Market Business Model · GSM Decision Platform · '+today+'</div></div>'
    +'<div class="stag">CONFIDENTIAL</div></div>'
    +'<div class="sgrid">'
@@ -460,7 +487,7 @@ function buildSheet(){
    +'<tr><td>Exchange rate</td><td>'+A.fx.toLocaleString('en-US')+' ₫/US$</td><td>Market rate at collection · M</td></tr>'
    +'<tr><td>Board requirements</td><td>'+(A.margin*100).toFixed(0)+'% margin · '+A.paybackYears+'-yr payback</td><td>Board input</td></tr></table>'
    +'<div class="vend">VENDORS DESIGN INSIDE THE BOUNDARIES — no concept advances without a production AND 10-year operations cost model that fits.</div>'
-   +'<div class="foot">Sun Group Entertainment (GSM) · CEO Toolbox — GSM Decision Platform · Generated '+today+' · Sources &amp; confidence per Market Intelligence base</div>';
+   +'<div class="foot">Sun Group Entertainment (GSM) · CEO Toolbox — GSM Decision Platform'+(projectName?(' · '+decodeURIComponent(projectName)):'')+' · Generated '+today+' · Sources &amp; confidence per Market Intelligence base</div>';
 }
 function printSheet(){buildSheet();window.print();}
 
