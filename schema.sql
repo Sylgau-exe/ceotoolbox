@@ -46,6 +46,22 @@ CREATE INDEX IF NOT EXISTS idx_indicators_city ON indicators(city);
 CREATE INDEX IF NOT EXISTS idx_indicators_code ON indicators(city, code, period_date);
 CREATE INDEX IF NOT EXISTS idx_indicators_category ON indicators(category);
 
+-- ============ DATA SOURCES (user-suggested feeds for the collection engine) ============
+CREATE TABLE IF NOT EXISTS sources (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  name VARCHAR(200) NOT NULL,
+  url TEXT NOT NULL,
+  city VARCHAR(80) NOT NULL,               -- city it covers, or 'Vietnam'
+  kind VARCHAR(30) DEFAULT 'website',       -- website | spreadsheet | pdf | portal
+  language VARCHAR(10) DEFAULT 'vi',
+  notes TEXT,
+  status VARCHAR(20) DEFAULT 'pending',     -- pending -> active once the collector reads it
+  last_collected_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_sources_city ON sources(city);
+
 -- ============ PROJECTS (Project Alpha — Da Nang, Project Delta — HCMC, ...) ============
 CREATE TABLE IF NOT EXISTS projects (
   id SERIAL PRIMARY KEY,

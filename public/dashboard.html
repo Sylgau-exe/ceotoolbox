@@ -73,6 +73,36 @@
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty">No indicators collected for this city yet.<br><br>The collection engine covers it on its next scheduled run — national (Vietnam-level) indicators still apply and are shown above.</div>
 
+  <div class="panel-src" id="srcPanel" style="margin-top:30px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11.5px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">DATA SOURCES — FEED THE COLLECTION ENGINE</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">Know a source we don't? Municipal statistics, Sở Du lịch releases, internal spreadsheets — add the link and the collection engine reads it on its next run (Vietnamese is fine).</div>
+      </div>
+      <button class="btn" style="padding:9px 15px;font-size:12.5px" onclick="toggleSrcForm()">＋ Add a source</button>
+    </div>
+    <div id="srcForm" style="display:none;margin-top:14px;background:#F6F9FC;border:1px solid #DBE5EF;border-radius:10px;padding:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <input id="sf_name" placeholder="Source name — e.g. Cục Thống kê TP.HCM" style="padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13px">
+        <input id="sf_url" placeholder="Link — website, PDF or spreadsheet share link" style="padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13px">
+        <select id="sf_kind" style="padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;background:#fff">
+          <option value="website">Website / portal</option>
+          <option value="spreadsheet">Spreadsheet (share link)</option>
+          <option value="pdf">PDF / report</option>
+        </select>
+        <select id="sf_lang" style="padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;background:#fff">
+          <option value="vi">Tiếng Việt</option><option value="en">English</option><option value="other">Other</option>
+        </select>
+      </div>
+      <input id="sf_notes" placeholder="What's in it? e.g. monthly arrivals by nationality (optional)" style="width:100%;margin-top:10px;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13px">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn" style="background:#fff;color:var(--navy);border:1.5px solid var(--line);padding:8px 14px;font-size:12.5px" onclick="toggleSrcForm()">Cancel</button>
+        <button class="btn" style="padding:8px 14px;font-size:12.5px" onclick="addSource()">Queue for collection</button>
+      </div>
+    </div>
+    <div id="srcList" style="margin-top:12px"></div>
+  </div>
+
   <div class="cta">
     <button class="btn" onclick="openModel()">Open in Market Business Model →</button>
     <div class="note">Latest values pre-populate the model's assumptions, so the constraints stay current. Collection cadence is honest: monthly — that's how often the sources themselves move.</div>
@@ -103,7 +133,7 @@ function renderChips(){
     return '<button class="chipbtn'+(c[0]===cat?' on':'')+'" onclick="setCat(\''+c[0]+'\')">'+c[1]+'</button>';
   }).join('');
 }
-function setCity(c){city=c;load();}
+function setCity(c){city=c;load();loadSources();}
 function setCat(c){cat=c;renderChips();renderTiles();}
 function openModel(){location.href='model.html?city='+encodeURIComponent(city);}
 
@@ -190,6 +220,49 @@ async function load(){
   }
 }
 load();
+
+// ---------------- Data sources ----------------
+function toggleSrcForm(){var f=document.getElementById('srcForm');f.style.display=f.style.display==='none'?'block':'none';}
+function kindChip(k){var lbl={website:'WEBSITE',spreadsheet:'SPREADSHEET',pdf:'PDF',portal:'PORTAL'}[k]||k.toUpperCase();
+  return '<span style="font-size:9px;font-weight:800;letter-spacing:.6px;background:#EDF2F8;color:var(--steel);border-radius:5px;padding:2px 7px">'+lbl+'</span>';}
+function statusChip(s){return s==='active'
+  ?'<span style="font-size:9px;font-weight:800;background:#E7F2EB;color:var(--green);border-radius:99px;padding:2px 8px">ACTIVE</span>'
+  :'<span style="font-size:9px;font-weight:800;background:#FBF3E1;color:#8A5A00;border-radius:99px;padding:2px 8px">QUEUED — next run</span>';}
+async function loadSources(){
+  try{
+    var r=await fetch('/api/sources?city='+encodeURIComponent(city),{headers:{Authorization:'Bearer '+token}});
+    if(!r.ok){document.getElementById('srcList').innerHTML='';return;}
+    var srcs=(await r.json()).sources||[];
+    var el=document.getElementById('srcList');
+    if(!srcs.length){el.innerHTML='<div style="font-size:12px;color:#8A98A8;border:1.5px dashed var(--line);border-radius:9px;padding:12px;text-align:center">No sources registered for '+city+' yet — the ones the team knows are exactly the ones we can\'t find from outside.</div>';return;}
+    el.innerHTML=srcs.map(function(s){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F0F3F7;font-size:13px;flex-wrap:wrap">'
+      +'<span style="min-width:200px;flex:1"><a href="'+s.url+'" target="_blank" rel="noopener" style="color:var(--navy);font-weight:700;text-decoration:none">'+s.name+' ↗</a>'
+      +' '+kindChip(s.kind)+(s.language==='vi'?' <span style="font-size:9px;color:#8A98A8">VI</span>':'')
+      +(s.notes?'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+s.notes+'</div>':'')+'</span>'
+      +'<span style="display:flex;align-items:center;gap:8px">'+statusChip(s.status)
+      +'<span style="font-size:10px;color:#8A98A8">'+(s.suggested_by?('by '+s.suggested_by):'')+' · '+s.city+'</span>'
+      +'<a style="font-size:11px;color:#B3403A;cursor:pointer;font-weight:700" onclick="delSource('+s.id+')">remove</a></span></div>';
+    }).join('');
+  }catch(e){}
+}
+async function addSource(){
+  var body={name:document.getElementById('sf_name').value.trim(),url:document.getElementById('sf_url').value.trim(),
+    city:city,kind:document.getElementById('sf_kind').value,language:document.getElementById('sf_lang').value,
+    notes:document.getElementById('sf_notes').value.trim()};
+  if(!body.name||!body.url){showAlert('Source name and link are required.',true);return;}
+  try{
+    var r=await fetch('/api/sources',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)});
+    if(!r.ok)throw new Error((await r.json()).error||r.status);
+    ['sf_name','sf_url','sf_notes'].forEach(function(i){document.getElementById(i).value=''});
+    toggleSrcForm();loadSources();
+  }catch(e){showAlert('Could not add source — '+e.message,true);}
+}
+async function delSource(id){
+  await fetch('/api/sources?id='+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});
+  loadSources();
+}
+loadSources();
 </script>
 </body>
 </html>
