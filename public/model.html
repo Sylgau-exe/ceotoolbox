@@ -172,6 +172,16 @@
         <input type="number" id="bmq" min="0" step="1" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px" onchange="A.benchmarkQuote=Number(this.value)||0;recalc()">
         <div style="font-size:11px;color:#8A98A8;margin-top:5px">Default US$52M = the Dragone proposal as reported by GSM (sold at US$32M, US$52M all-in).</div>
       </div>
+
+      <div class="panel">
+        <div class="ptitle"><span>BUSINESS DEVELOPMENT — CDA CHECK <span class="stepnum">5</span></span></div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">What does the Concept Development Agreement commit to? Enter the vendor's numbers — the model tells you if the gates cover them.</div>
+        <label class="slab">CDA production commitment (US$M) <span class="v" style="font-weight:400;font-size:11px;color:#8A98A8">0 = none yet</span></label>
+        <input type="number" id="cdaProd" min="0" step="0.5" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px" onchange="A.cdaProduction=Number(this.value)||0;recalc()">
+        <label class="slab">CDA annual operating cost (US$M/yr) <span class="v" style="font-weight:400;font-size:11px;color:#8A98A8">0 = none yet</span></label>
+        <input type="number" id="cdaOpex" min="0" step="0.5" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px" onchange="A.cdaOpex=Number(this.value)||0;recalc()">
+        <div id="cdaStatus" style="margin-top:12px"></div>
+      </div>
     </div>
 
     <!-- RIGHT: results -->
@@ -281,7 +291,8 @@ var A={
   positioning:1.10, netRealization:0.78,
   seats:1200, shows:300, occupancy:0.65,
   paybackYears:5, margin:0.15,
-  benchmarkQuote:52, benchmarkLabel:'Dragone proposal — sold at US$32M, US$52M all-in (per GSM, Jul 2026)'
+  benchmarkQuote:52, benchmarkLabel:'Dragone proposal — sold at US$32M, US$52M all-in (per GSM, Jul 2026)',
+  cdaProduction:0, cdaOpex:0
 };
 var SEAT_OPTS=[800,1000,1200,1500,2000,2500,3000,3500];
 // Default competitive weights per city — reflect proximity/relevance of each reference.
@@ -372,6 +383,7 @@ function recalc(){
   document.getElementById('revVND').textContent='= '+fmtVNDbn(R.revenueVND)+' · gross ticket '+fmtVNDk(R.grossTicket)+' (US$'+(R.grossTicket/A.fx).toFixed(1)+') · FX '+A.fx.toLocaleString('en-US')+' ₫/US$';
   document.getElementById('c1').textContent=fmtUSD(R.opexCeilingUSD)+' / yr';
   document.getElementById('c2').textContent=fmtUSD(R.maxInvestmentUSD);
+  renderCdaStatus();
   renderSens();
   buildSheet();
 }
@@ -482,8 +494,29 @@ function syncControls(){
   document.getElementById('payback').value=A.paybackYears;
   document.getElementById('margin').value=Math.round(A.margin*100);
   document.getElementById('bmq').value=A.benchmarkQuote||0;
+  document.getElementById('cdaProd').value=A.cdaProduction||0;
+  document.getElementById('cdaOpex').value=A.cdaOpex||0;
 }
 
+
+
+// ---------------- CDA check ----------------
+function cdaEval(){
+  var gate2=R.maxInvestmentUSD/1e6, gate1=R.opexCeilingUSD/1e6;
+  function one(v,gate){if(!v)return null;var d=gate-v;return{value:v,gate:gate,covered:d>=0,delta:Math.abs(d)};}
+  return{prod:one(A.cdaProduction,gate2),opex:one(A.cdaOpex,gate1),gate1:gate1,gate2:gate2};
+}
+function pill(covered){return covered
+  ?'<span style="font-size:10px;font-weight:800;letter-spacing:.6px;background:#E7F2EB;color:#2F7D52;border-radius:99px;padding:3px 10px">✓ COVERED</span>'
+  :'<span style="font-size:10px;font-weight:800;letter-spacing:.6px;background:#FBEAE9;color:#B3403A;border-radius:99px;padding:3px 10px">⚠ EXPOSED</span>';}
+function renderCdaStatus(){
+  var el=document.getElementById('cdaStatus');if(!el||!R)return;
+  var c=cdaEval();
+  if(!c.prod&&!c.opex){el.innerHTML='<div style="font-size:11.5px;color:#8A98A8;border:1.5px dashed var(--line);border-radius:9px;padding:9px 12px">No CDA numbers yet — the infographic will show what the CDA must lock in.</div>';return;}
+  function row(lbl,r){if(!r)return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #F0F3F7;font-size:12.5px"><span>'+lbl+'</span><span style="color:#8A98A8;font-size:11px">not entered</span></div>';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #F0F3F7;font-size:12.5px"><span>'+lbl+': <b>US$'+r.value.toFixed(1)+'M</b> vs gate US$'+r.gate.toFixed(1)+'M</span>'+pill(r.covered)+'</div>';}
+  el.innerHTML=row('Production',c.prod)+row('Operations (/yr)',c.opex);
+}
 
 // ---------------- Infographic ----------------
 function icoChip(emoji,bg){return '<div style="width:52px;height:52px;border-radius:14px;background:'+(bg||'#EDF2F8')+';display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 8px">'+emoji+'</div>';}
@@ -604,6 +637,32 @@ function buildInfog(){
    +disciplineBar()
    +'<div style="font-size:9.5px;color:#8A98A8;margin-top:6px">Benchmark: '+(A.benchmarkLabel||'vendor quote, editable in Board Requirements')+'</div></div>'):'')
 
+   // ======= CDA check =======
+   +(function(){
+      var c=cdaEval();
+      var head='<div style="font-size:10px;font-weight:800;letter-spacing:1.1px;color:'+STEEL+';margin-bottom:10px">QUESTIONS FROM BUSINESS DEVELOPMENT — THE CDA CHECK</div>';
+      if(!c.prod&&!c.opex){
+        return '<div style="margin-top:14px;background:#FFFBF0;border:2px dashed '+AMBER+';border-radius:14px;padding:18px 22px">'+head
+        +'<div style="font-size:14px;font-weight:800;color:'+NAVY+'">No CDA numbers entered — here is what the agreement must lock in:</div>'
+        +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">'
+        +'<div style="flex:1;min-width:210px;background:#fff;border:1px solid '+LINE+';border-radius:11px;padding:13px 15px;font-size:12.5px;color:'+INK+'"><b style="color:'+NAVY+'">① Production cap ≤ US$'+c.gate2.toFixed(1)+'M</b><br><span style="color:'+MUT+'">all-in, no extras clause left open</span></div>'
+        +'<div style="flex:1;min-width:210px;background:#fff;border:1px solid '+LINE+';border-radius:11px;padding:13px 15px;font-size:12.5px;color:'+INK+'"><b style="color:'+NAVY+'">② Operating cost ≤ US$'+c.gate1.toFixed(1)+'M/yr</b><br><span style="color:'+MUT+'">10-year operations model attached, not promised</span></div>'
+        +'<div style="flex:1;min-width:210px;background:#fff;border:1px solid '+LINE+';border-radius:11px;padding:13px 15px;font-size:12.5px;color:'+INK+'"><b style="color:'+NAVY+'">③ Breakeven at opening</b><br><span style="color:'+MUT+'">revenue floor covers year-one operating cost</span></div>'
+        +'</div></div>';
+      }
+      function line(lbl,r){
+        if(!r)return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F0F3F7;font-size:13px"><span style="color:'+INK+'">'+lbl+'</span><span style="color:#8A98A8;font-size:11px">not in CDA — must be added</span></div>';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F0F3F7;font-size:13px">'
+         +'<span style="color:'+INK+'">'+lbl+': <b>US$'+r.value.toFixed(1)+'M</b> committed vs gate <b>US$'+r.gate.toFixed(1)+'M</b></span>'
+         +'<span>'+(r.covered?'<b style="color:'+GREEN+'">✓ COVERED — US$'+r.delta.toFixed(1)+'M headroom</b>':'<b style="color:#B3403A">⚠ EXPOSED — US$'+r.delta.toFixed(1)+'M over the gate</b>')+'</span></div>';
+      }
+      var anyExposed=(c.prod&&!c.prod.covered)||(c.opex&&!c.opex.covered);
+      return '<div style="margin-top:14px;background:#fff;border:2px solid '+(anyExposed?'#B3403A':GREEN)+';border-radius:14px;padding:18px 22px">'+head
+       +line('Production commitment',c.prod)
+       +line('Annual operating cost',c.opex)
+       +'<div style="margin-top:11px;font-size:12px;font-weight:800;color:'+(anyExposed?'#B3403A':GREEN)+'">'
+       +(anyExposed?'⚠ THE CDA EXCEEDS WHAT THIS MARKET CAN PAY BACK — renegotiate before signing.':'✓ THE CDA FITS INSIDE THE GATES — the market covers the commitment.')+'</div></div>';
+   })()
    // ======= footer =======
    +'<div style="margin-top:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;border-top:2.5px solid '+NAVY+';padding-top:10px">'
    +'<div style="font-size:12px;font-weight:800;color:'+NAVY+'">VENDORS DESIGN INSIDE THE BOUNDARIES — Cirque du Soleil · Dragone · others</div>'
