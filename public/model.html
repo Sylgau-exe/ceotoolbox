@@ -173,6 +173,8 @@
       <div class="panel">
         <div class="ptitle"><span>BUSINESS DEVELOPMENT — CDA CHECK <span class="stepnum">5</span></span></div>
         <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">What does the Concept Development Agreement commit to? Enter the vendor's numbers — the model tells you if the gates cover them.</div>
+        <label class="slab">Vendor (CDA counterparty)</label>
+        <input type="text" id="cdaVendor" placeholder="e.g. Dragone, Cirque du Soleil…" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px" onchange="A.cdaVendor=this.value.trim();recalc()">
         <label class="slab">CDA production commitment (US$M) <span class="v" style="font-weight:400;font-size:11px;color:#8A98A8">0 = none yet</span></label>
         <input type="number" id="cdaProd" min="0" step="0.5" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px" onchange="A.cdaProduction=Number(this.value)||0;recalc()">
         <label class="slab">CDA annual operating cost (US$M/yr) <span class="v" style="font-weight:400;font-size:11px;color:#8A98A8">0 = none yet</span></label>
@@ -207,8 +209,6 @@
         <div class="ptitle"><span>SENSITIVITY — max production investment (US$M), seats × shows/week</span></div>
         <div class="sens" id="sens"></div>
       </div>
-
-      <div class="vendors">VENDORS DESIGN INSIDE THE BOUNDARIES — Cirque du Soleil · Dragone · others</div>
 
       <div class="actions">
         <button class="btn" onclick="printSheet()">Print Concept Constraint Sheet</button>
@@ -288,7 +288,7 @@ var A={
   positioning:1.10, netRealization:0.78,
   seats:1200, shows:300, occupancy:0.65,
   paybackYears:5, margin:0.15,
-  cdaProduction:0, cdaOpex:0
+  cdaProduction:0, cdaOpex:0, cdaVendor:''
 };
 var SEAT_OPTS=[800,1000,1200,1500,2000,2500,3000,3500];
 // Default competitive weights per city — reflect proximity/relevance of each reference.
@@ -489,6 +489,7 @@ function syncControls(){
   document.getElementById('occ').value=Math.round(A.occupancy*100);
   document.getElementById('payback').value=A.paybackYears;
   document.getElementById('margin').value=Math.round(A.margin*100);
+  document.getElementById('cdaVendor').value=A.cdaVendor||'';
   document.getElementById('cdaProd').value=A.cdaProduction||0;
   document.getElementById('cdaOpex').value=A.cdaOpex||0;
 }
@@ -615,7 +616,11 @@ function buildInfog(){
    // ======= CDA check =======
    +(function(){
       var c=cdaEval();
-      var head='<div style="font-size:10px;font-weight:800;letter-spacing:1.1px;color:'+STEEL+';margin-bottom:10px">QUESTIONS FROM BUSINESS DEVELOPMENT — THE CDA CHECK</div>';
+      var who=[];
+      if(projectName)who.push(decodeURIComponent(projectName));
+      if(A.cdaVendor)who.push('CDA with '+A.cdaVendor);
+      var head='<div style="font-size:10px;font-weight:800;letter-spacing:1.1px;color:'+STEEL+'">QUESTIONS FROM BUSINESS DEVELOPMENT — THE CDA CHECK</div>'
+       +(who.length?'<div style="font-size:13px;font-weight:800;color:'+NAVY+';margin:4px 0 10px">'+who.join(' · ')+'</div>':'<div style="margin-bottom:10px"></div>');
       if(!c.prod&&!c.opex){
         return '<div style="margin-top:14px;background:#FFFBF0;border:2px dashed '+AMBER+';border-radius:14px;padding:18px 22px">'+head
         +'<div style="font-size:14px;font-weight:800;color:'+NAVY+'">No CDA numbers entered — here is what the agreement must lock in:</div>'
@@ -665,7 +670,6 @@ function buildSheet(){
    +A.competitors.map(function(c){return '<tr><td>'+c.name+' ('+(c.weight*100).toFixed(0)+'%)</td><td>'+fmtVNDk(c.price)+'</td><td>OTA scan · confidence '+c.conf+'</td></tr>';}).join('')
    +'<tr><td>Exchange rate</td><td>'+A.fx.toLocaleString('en-US')+' ₫/US$</td><td>Market rate at collection · M</td></tr>'
    +'<tr><td>Board requirements</td><td>'+(A.margin*100).toFixed(0)+'% margin · '+A.paybackYears+'-yr payback</td><td>Board input</td></tr></table>'
-   +'<div class="vend">VENDORS DESIGN INSIDE THE BOUNDARIES — no concept advances without a production AND 10-year operations cost model that fits.</div>'
    +'<div class="foot">Sun Group Entertainment (GSM) · CEO Toolbox — GSM Decision Platform'+(projectName?(' · '+decodeURIComponent(projectName)):'')+' · Generated '+today+' · Sources &amp; confidence per Market Intelligence base</div>';
 }
 function printSheet(){buildSheet();window.print();}
