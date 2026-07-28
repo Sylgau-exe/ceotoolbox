@@ -639,9 +639,7 @@ function buildInfog(){
        +(anyExposed?'⚠ THE CDA EXCEEDS WHAT THIS MARKET CAN PAY BACK — renegotiate before signing.':'✓ THE CDA FITS INSIDE THE GATES — the market covers the commitment.')+'</div></div>';
    })()
    // ======= footer =======
-   +'<div style="margin-top:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;border-top:2.5px solid '+NAVY+';padding-top:10px">'
-   +'<div style="font-size:12px;font-weight:800;color:'+NAVY+'">VENDORS DESIGN INSIDE THE BOUNDARIES — Cirque du Soleil · Dragone · others</div>'
-   +'<div style="font-size:9.5px;color:#8A98A8">Sun Group Entertainment (GSM) · CEO Toolbox · Panda Projet Inc. · sources per Market Intelligence base</div></div>';
+   +'<div style="margin-top:14px;text-align:center;border-top:2.5px solid '+NAVY+';padding-top:10px;font-size:9.5px;color:#8A98A8">Sun Group Entertainment (GSM) · CEO Toolbox · Panda Projet Inc. · sources per Market Intelligence base</div>';
 }
 function openInfog(){buildInfog();document.getElementById('infogWrap').style.display='block';}
 function closeInfog(){document.getElementById('infogWrap').style.display='none';document.body.classList.remove('infoprint');}
