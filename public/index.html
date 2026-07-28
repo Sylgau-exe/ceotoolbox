@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CEO Toolbox — GSM Decision Platform</title>
+<style>
+  :root{--navy:#1E3A5F;--navy2:#16304F;--steel:#5B7A9D;--amber:#D9A441;--ink:#22303F;--muted:#64748B;--line:#E2E8F0;--bg:#F4F6F9;--green:#2F7D52;--red:#B3403A}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(160deg,#16304F 0%,#1E3A5F 55%,#2A4A73 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;color:var(--ink)}
+  .card{background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(10,25,47,.45);max-width:420px;width:100%;padding:40px 36px}
+  .wordmark{font-size:26px;font-weight:800;letter-spacing:.5px;color:var(--navy)}
+  .wordmark span{color:var(--amber)}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:6px}
+  .chip{display:inline-block;margin-top:12px;font-size:10.5px;font-weight:700;letter-spacing:1.2px;color:#8A5A00;background:#FBF3E1;border:1px solid #EAD9AE;border-radius:99px;padding:3px 10px}
+  form{margin-top:26px}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:14px 0 5px}
+  input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;font-size:15px;color:var(--ink);outline:none;transition:border .15s}
+  input:focus{border-color:var(--steel)}
+  button.primary{width:100%;margin-top:22px;padding:12px;background:var(--navy);color:#fff;border:0;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}
+  button.primary:hover{background:var(--navy2)}
+  button.primary:disabled{opacity:.6;cursor:wait}
+  .switch{margin-top:18px;text-align:center;font-size:13.5px;color:var(--muted)}
+  .switch a{color:var(--steel);font-weight:600;cursor:pointer;text-decoration:none}
+  .error{display:none;margin-top:16px;padding:10px 13px;background:#FBEAE9;border:1px solid #EFC7C4;color:var(--red);border-radius:9px;font-size:13.5px}
+  .footer{margin-top:26px;text-align:center;font-size:11.5px;color:#9AA8B8}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="wordmark">CEO<span>TOOLBOX</span></div>
+  <div class="sub">GSM Decision Platform · Sun Group Entertainment</div>
+  <div class="chip">CONFIDENTIAL</div>
+
+  <form id="authForm" onsubmit="return submitAuth(event)">
+    <div id="nameField" style="display:none">
+      <label for="name">Full name</label>
+      <input type="text" id="name" autocomplete="name" placeholder="Your name">
+    </div>
+    <label for="email">Email</label>
+    <input type="email" id="email" autocomplete="email" required placeholder="you@company.com">
+    <label for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
+    <div class="error" id="errorBox"></div>
+    <button class="primary" id="submitBtn" type="submit">Sign in</button>
+  </form>
+
+  <div class="switch" id="switchLine">No account yet? <a onclick="setMode('register')">Request access</a></div>
+  <div class="footer">© 2026 Panda Projet Inc. · Secure access — GitHub · Vercel · Neon (backed up)</div>
+</div>
+
+<script>
+window.onerror=function(m,s,l,c,e){try{showError('Unexpected error: '+m)}catch(_){}}
+window.onunhandledrejection=function(ev){try{showError('Unexpected error: '+(ev.reason&&ev.reason.message||ev.reason))}catch(_){}}
+
+var mode='login';
+if(localStorage.getItem('auth_token')){location.href='app.html';}
+
+function setMode(m){
+  mode=m;
+  document.getElementById('nameField').style.display=m==='register'?'block':'none';
+  document.getElementById('submitBtn').textContent=m==='register'?'Create account':'Sign in';
+  document.getElementById('switchLine').innerHTML=m==='register'
+    ?'Already have access? <a onclick="setMode(\'login\')">Sign in</a>'
+    :'No account yet? <a onclick="setMode(\'register\')">Request access</a>';
+  hideError();
+}
+function showError(msg){var b=document.getElementById('errorBox');b.textContent=msg;b.style.display='block';}
+function hideError(){document.getElementById('errorBox').style.display='none';}
+
+async function submitAuth(ev){
+  ev.preventDefault();
+  hideError();
+  var btn=document.getElementById('submitBtn');btn.disabled=true;
+  var body={email:document.getElementById('email').value.trim(),password:document.getElementById('password').value};
+  var url='/api/auth/login';
+  if(mode==='register'){body.name=document.getElementById('name').value.trim();url='/api/auth/register';
+    if(!body.name){showError('Please enter your name.');btn.disabled=false;return false;}}
+  try{
+    var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var data=await r.json();
+    if(!r.ok){showError(data.error||'Sign-in failed.');btn.disabled=false;return false;}
+    localStorage.setItem('auth_token',data.token);
+    localStorage.setItem('user',JSON.stringify(data.user));
+    location.href='app.html';
+  }catch(e){showError('Network error — please try again.');btn.disabled=false;}
+  return false;
+}
+</script>
+</body>
+</html>

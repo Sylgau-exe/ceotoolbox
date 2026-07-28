@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CEO Toolbox — Home</title>
+<style>
+  :root{--navy:#1E3A5F;--navy2:#16304F;--steel:#5B7A9D;--amber:#D9A441;--ink:#22303F;--muted:#64748B;--line:#E2E8F0;--bg:#F4F6F9;--green:#2F7D52}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  header{background:var(--navy);color:#fff;padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+  .wordmark{font-weight:800;font-size:18px;letter-spacing:.4px}
+  .wordmark span{color:var(--amber)}
+  .hsub{font-size:11.5px;color:#B9C7D8;margin-left:12px;padding-left:12px;border-left:1px solid #3D577A}
+  .hright{display:flex;align-items:center;gap:16px;font-size:13px}
+  .hright a{color:#C9D6E5;text-decoration:none}
+  .hright a:hover{color:#fff}
+  .uname{color:#E8EEF5;font-weight:600}
+  main{max-width:1080px;margin:0 auto;padding:44px 28px 60px}
+  h1{font-size:26px;color:var(--navy);letter-spacing:-.2px}
+  .lead{color:var(--muted);margin-top:8px;font-size:15px;max-width:640px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-top:34px}
+  .mod{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:10px;transition:box-shadow .15s,transform .15s;position:relative}
+  .mod.live{cursor:pointer}
+  .mod.live:hover{box-shadow:0 10px 28px rgba(30,58,95,.14);transform:translateY(-2px)}
+  .badge{position:absolute;top:18px;right:18px;font-size:10px;font-weight:800;letter-spacing:1px;border-radius:99px;padding:3px 9px}
+  .b-live{background:#E7F2EB;color:var(--green);border:1px solid #C4DECF}
+  .b-next{background:#FBF3E1;color:#8A5A00;border:1px solid #EAD9AE}
+  .b-road{background:#EEF2F6;color:var(--muted);border:1px solid var(--line)}
+  .mico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;background:#EDF2F8}
+  .mod h3{font-size:16.5px;color:var(--navy)}
+  .mod p{font-size:13.5px;color:var(--muted);line-height:1.5;flex:1}
+  .mlink{font-size:13.5px;font-weight:700;color:var(--steel)}
+  .mod.dim{opacity:.78}
+  footer{text-align:center;color:#9AA8B8;font-size:11.5px;padding:26px}
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center">
+    <div class="wordmark">CEO<span>TOOLBOX</span></div>
+    <div class="hsub">GSM Decision Platform · Sun Group Entertainment</div>
+  </div>
+  <div class="hright">
+    <span class="uname" id="uname"></span>
+    <a href="admin.html" id="adminLink" style="display:none">Admin</a>
+    <a onclick="signOut()" style="cursor:pointer">Sign out</a>
+  </div>
+</header>
+<main>
+  <h1 id="greeting">Welcome</h1>
+  <p class="lead">Decision and investment-management tools for GSM leadership. Every number carries its source, confidence and freshness — decisions inside boundaries the market can support.</p>
+
+  <div class="grid">
+    <div class="mod live" onclick="location.href='dashboard.html'">
+      <span class="badge b-live">LIVE</span>
+      <div class="mico">📊</div>
+      <h3>Market Intelligence</h3>
+      <p>Economic &amp; social indicators per Vietnamese city — sourced, confidence-rated, refreshed on schedule. Feeds the business model directly.</p>
+      <span class="mlink">Open dashboard →</span>
+    </div>
+    <div class="mod live" onclick="location.href='model.html'">
+      <span class="badge b-live">LIVE</span>
+      <div class="mico">🎯</div>
+      <h3>Vietnam Market Business Model</h3>
+      <p>One model, any city. Set your levers and the board's requirements — get the two constraints every vendor must design within.</p>
+      <span class="mlink">Open decision tool →</span>
+    </div>
+    <div class="mod dim">
+      <span class="badge b-next">COMING NEXT</span>
+      <div class="mico">🗂️</div>
+      <h3>Decision Portfolio</h3>
+      <p>Every opportunity as a lightweight charter with objective scoring — a single ranked portfolio replacing scattered vendor pitches.</p>
+      <span class="mlink">Proposal 2</span>
+    </div>
+    <div class="mod dim">
+      <span class="badge b-road">ROADMAP</span>
+      <div class="mico">💰</div>
+      <h3>TCO / Lifecycle Costing</h3>
+      <p>Whole-lifecycle cost of any concept — production, 10-year operations, refresh cycles — before a contract is signed.</p>
+      <span class="mlink">Planned</span>
+    </div>
+    <div class="mod dim">
+      <span class="badge b-road">ROADMAP</span>
+      <div class="mico">🏢</div>
+      <h3>Company Dashboard</h3>
+      <p>Operational and project status across the GSM portfolio — one page for the executive team and the board.</p>
+      <span class="mlink">Planned</span>
+    </div>
+  </div>
+</main>
+<footer>Confidential · Sun Group Entertainment (GSM) · Built by Panda Projet Inc.</footer>
+<script>
+window.onerror=function(m){try{alert('Unexpected error: '+m)}catch(_){}}
+window.onunhandledrejection=function(ev){console.error(ev.reason)}
+var token=localStorage.getItem('auth_token');
+if(!token){location.href='index.html';}
+var user={};try{user=JSON.parse(localStorage.getItem('user')||'{}')}catch(e){}
+document.getElementById('uname').textContent=user.name||user.email||'';
+document.getElementById('greeting').textContent='Welcome'+(user.name?', '+user.name.split(' ')[0]:'');
+if(user.isAdmin){document.getElementById('adminLink').style.display='inline';}
+fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}}).then(function(r){if(r.status===401){signOut();}}).catch(function(){});
+function signOut(){localStorage.removeItem('auth_token');localStorage.removeItem('user');location.href='index.html';}
+</script>
+</body>
+</html>

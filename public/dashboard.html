@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Intelligence — CEO Toolbox</title>
+<style>
+  :root{--navy:#1E3A5F;--navy2:#16304F;--steel:#5B7A9D;--amber:#D9A441;--ink:#22303F;--muted:#64748B;--line:#E2E8F0;--bg:#F4F6F9;--green:#2F7D52;--red:#B3403A;--datablue:#3A6EA8}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  header{background:var(--navy);color:#fff;padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+  .wordmark{font-weight:800;font-size:18px;letter-spacing:.4px;cursor:pointer}
+  .wordmark span{color:var(--amber)}
+  .hsub{font-size:11.5px;color:#B9C7D8;margin-left:12px;padding-left:12px;border-left:1px solid #3D577A}
+  .hright a{color:#C9D6E5;text-decoration:none;font-size:13px;margin-left:16px}
+  .hright a:hover{color:#fff}
+  main{max-width:1180px;margin:0 auto;padding:30px 28px 60px}
+  h1{font-size:22px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:4px}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:20px}
+  .chipbtn{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:99px;padding:7px 15px;font-size:13px;font-weight:600;cursor:pointer;transition:all .12s}
+  .chipbtn:hover{border-color:var(--steel)}
+  .chipbtn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .cats{margin-top:12px}
+  .cats .chipbtn{border-radius:8px;padding:6px 13px;font-size:12.5px}
+  .alert{display:none;margin-top:18px;background:#FBF3E1;border:1px solid #EAD9AE;color:#7A5200;border-radius:10px;padding:11px 16px;font-size:13.5px}
+  .alert.red{background:#FBEAE9;border-color:#EFC7C4;color:var(--red)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(256px,1fr));gap:16px;margin-top:22px}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 18px 14px;display:flex;flex-direction:column;gap:7px}
+  .tname{font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.2px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .tval{font-size:27px;font-weight:800;color:var(--navy);letter-spacing:-.4px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .tunit{font-size:13px;font-weight:600;color:var(--muted)}
+  .trend{font-size:13px;font-weight:700}
+  .trend.up{color:var(--green)}.trend.down{color:var(--red)}
+  .ttext{font-size:13.5px;color:var(--ink);line-height:1.5}
+  .tmeta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:8px;border-top:1px solid #F0F3F7}
+  .src{font-size:11px;color:#8A98A8;flex:1;min-width:120px}
+  .conf{font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px}
+  .cH{background:#E7F2EB;color:var(--green)}.cM{background:#FBF3E1;color:#8A5A00}.cL{background:#FBEAE9;color:var(--red)}
+  .fresh{font-size:10px;font-weight:700;border-radius:99px;padding:2px 8px}
+  .fF{background:#E7F2EB;color:var(--green)}.fA{background:#FBF3E1;color:#8A5A00}.fS{background:#FBEAE9;color:var(--red)}
+  .per{font-size:11px;color:#8A98A8}
+  .wide{grid-column:span 2}
+  @media(max-width:640px){.wide{grid-column:span 1}}
+  .empty{margin-top:26px;background:#fff;border:1.5px dashed var(--line);border-radius:13px;padding:38px;text-align:center;color:var(--muted);font-size:14px;display:none}
+  .cta{margin-top:28px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--navy);color:#fff;border:0;border-radius:9px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer}
+  .btn:hover{background:var(--navy2)}
+  .note{font-size:12px;color:#8A98A8;max-width:520px}
+  footer{text-align:center;color:#9AA8B8;font-size:11.5px;padding:26px}
+  spark{display:block}
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center">
+    <div class="wordmark" onclick="location.href='app.html'">CEO<span>TOOLBOX</span></div>
+    <div class="hsub">Market Intelligence</div>
+  </div>
+  <div class="hright"><a href="app.html">Home</a><a href="model.html" id="modelLink">Business Model</a><a onclick="signOut()" style="cursor:pointer">Sign out</a></div>
+</header>
+<main>
+  <h1>Market Intelligence</h1>
+  <div class="sub">Economic &amp; social indicators per city — every number with its source, confidence and freshness. Nothing ages silently.</div>
+
+  <div class="row" id="cityRow"></div>
+  <div class="row cats" id="catRow"></div>
+  <div class="alert" id="staleAlert"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">No indicators collected for this city yet.<br><br>The collection engine covers it on its next scheduled run — national (Vietnam-level) indicators still apply and are shown above.</div>
+
+  <div class="cta">
+    <button class="btn" onclick="openModel()">Open in Market Business Model →</button>
+    <div class="note">Latest values pre-populate the model's assumptions, so the constraints stay current. Collection cadence is honest: monthly — that's how often the sources themselves move.</div>
+  </div>
+</main>
+<footer>Confidential · Sun Group Entertainment (GSM) · Indicator base: Neon PostgreSQL · Collection: scheduled AI job (monthly + on-demand)</footer>
+
+<script>
+window.onerror=function(m){try{showAlert('Unexpected error: '+m,true)}catch(_){}}
+window.onunhandledrejection=function(ev){console.error(ev.reason)}
+var token=localStorage.getItem('auth_token');
+if(!token){location.href='index.html';}
+function signOut(){localStorage.removeItem('auth_token');localStorage.removeItem('user');location.href='index.html';}
+
+var CITIES=['Ho Chi Minh City','Hanoi','Da Nang','Nha Trang','Phu Quoc'];
+var CATS=[['all','All'],['tourism','Tourism'],['economy','Economy'],['pricing','Pricing'],['infrastructure','Infrastructure'],['policy','Policy']];
+var params=new URLSearchParams(location.search);
+var city=params.get('city')||'Ho Chi Minh City';
+if(CITIES.indexOf(city)<0)CITIES.push(city);
+var cat='all';
+var DATA=null;
+
+function renderChips(){
+  document.getElementById('cityRow').innerHTML=CITIES.map(function(c){
+    return '<button class="chipbtn'+(c===city?' on':'')+'" onclick="setCity(\''+c.replace(/'/g,"\\'")+'\')">'+c+'</button>';
+  }).join('');
+  document.getElementById('catRow').innerHTML=CATS.map(function(c){
+    return '<button class="chipbtn'+(c[0]===cat?' on':'')+'" onclick="setCat(\''+c[0]+'\')">'+c[1]+'</button>';
+  }).join('');
+}
+function setCity(c){city=c;load();}
+function setCat(c){cat=c;renderChips();renderTiles();}
+function openModel(){location.href='model.html?city='+encodeURIComponent(city);}
+
+function showAlert(msg,red){var a=document.getElementById('staleAlert');a.textContent=msg;a.style.display='block';a.className='alert'+(red?' red':'');}
+
+function fmtVal(v,unit){
+  if(v==null)return '—';
+  var abs=Math.abs(v);
+  if(unit==='VND'){ if(abs>=1e6)return (v/1e6).toFixed(2).replace(/\.?0+$/,'')+'M ₫'; if(abs>=1e3)return Math.round(v/1e3)+'k ₫'; return v+' ₫';}
+  if(abs>=1e6)return (v/1e6).toFixed(1).replace(/\.0$/,'')+'M';
+  if(abs>=1e4)return Math.round(v/1e3)+'k';
+  if(abs>=1e3)return v.toLocaleString('en-US');
+  return (Math.round(v*100)/100).toString();
+}
+function unitLabel(unit){
+  if(!unit)return '';
+  if(unit==='VND')return '';
+  if(unit==='%'||unit==='%/yr')return unit;
+  return unit;
+}
+function freshness(collectedAt){
+  var days=(Date.now()-new Date(collectedAt).getTime())/864e5;
+  if(days<=45)return['fF','FRESH'];
+  if(days<=120)return['fA','AGING'];
+  return['fS','STALE'];
+}
+function sparkline(hist){
+  var pts=hist.filter(function(h){return h.value!=null});
+  if(pts.length<3)return '';
+  var vals=pts.map(function(p){return p.value});
+  var min=Math.min.apply(null,vals),max=Math.max.apply(null,vals);
+  var rng=(max-min)||1,W=110,H=28;
+  var d=pts.map(function(p,i){
+    var x=(i/(pts.length-1))*W, y=H-3-((p.value-min)/rng)*(H-6);
+    return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);
+  }).join(' ');
+  return '<svg width="'+W+'" height="'+H+'" aria-hidden="true"><path d="'+d+'" fill="none" stroke="#3A6EA8" stroke-width="2" stroke-linecap="round"/></svg>';
+}
+
+function renderTiles(){
+  var grid=document.getElementById('grid');
+  var inds=(DATA?DATA.indicators:[]).filter(function(i){return cat==='all'||i.category===cat});
+  // city-specific presence check (excluding national rows)
+  var cityRows=(DATA?DATA.indicators:[]).filter(function(i){return i.city!=='Vietnam'});
+  document.getElementById('empty').style.display=(cityRows.length===0)?'block':'none';
+  var stale=0;
+  grid.innerHTML=inds.map(function(ind){
+    var l=ind.latest;
+    var f=freshness(l.collected_at); if(f[1]==='STALE')stale++;
+    var trendHtml='';
+    if(ind.trend!=null){
+      var up=ind.trend>=0;
+      trendHtml='<span class="trend '+(up?'up':'down')+'">'+(up?'↗':'↘')+' '+(Math.abs(ind.trend)*100).toFixed(0)+'%</span>';
+    }
+    var isText=l.value==null&&l.value_text;
+    var scope=ind.city==='Vietnam'?' · national':'';
+    var body=isText
+      ? '<div class="ttext">'+l.value_text+'</div>'
+      : '<div class="tval">'+fmtVal(l.value,l.unit)+'<span class="tunit">'+unitLabel(l.unit)+'</span>'+trendHtml+'</div>'+sparkline(ind.history);
+    return '<div class="tile'+(isText?' wide':'')+'">'
+      +'<div class="tname"><span>'+ind.name+scope+'</span><span class="fresh '+f[0]+'">'+f[1]+'</span></div>'
+      +body
+      +'<div class="tmeta"><span class="src">'+l.source+' · '+l.period+'</span><span class="conf c'+l.confidence+'">'+l.confidence+'</span></div>'
+      +'</div>';
+  }).join('');
+  if(stale>0){showAlert(stale+' indicator'+(stale>1?'s':'')+' past the staleness threshold — flagged for the next collection run.',false);}
+  else{document.getElementById('staleAlert').style.display='none';}
+}
+
+async function load(){
+  renderChips();
+  document.getElementById('grid').innerHTML='<div style="color:#8A98A8;font-size:14px;padding:20px">Loading indicators…</div>';
+  try{
+    var r=await fetch('/api/indicators?city='+encodeURIComponent(city),{headers:{Authorization:'Bearer '+token}});
+    if(r.status===401){signOut();return;}
+    if(!r.ok)throw new Error('API '+r.status);
+    DATA=await r.json();
+    renderTiles();
+  }catch(e){
+    document.getElementById('grid').innerHTML='';
+    showAlert('Could not load the indicator base — '+e.message+'. Check the database connection.',true);
+  }
+}
+load();
+</script>
+</body>
+</html>
