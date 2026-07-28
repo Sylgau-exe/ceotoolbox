@@ -2,6 +2,9 @@
 import { sql } from '@vercel/postgres';
 import { getUserFromRequest, cors } from '../../lib/auth.js';
 
+// Accept Neon's DATABASE_URL when POSTGRES_URL is not set (Vercel marketplace integration)
+if (!process.env.POSTGRES_URL && process.env.DATABASE_URL) { process.env.POSTGRES_URL = process.env.DATABASE_URL; }
+
 export default async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
