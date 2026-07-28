@@ -168,9 +168,6 @@
         <label class="slab">Required profit margin <span class="v" id="marginV"></span></label>
         <input type="range" id="margin" min="5" max="30" step="1" oninput="recalc()">
         <div class="derived"><span>Implied ROI</span><b id="roiV"></b></div>
-        <label class="slab">Vendor quote benchmark (US$M) — for comparison <span class="v" style="font-weight:400;font-size:11px;color:#8A98A8">0 = hide</span></label>
-        <input type="number" id="bmq" min="0" step="1" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px" onchange="A.benchmarkQuote=Number(this.value)||0;recalc()">
-        <div style="font-size:11px;color:#8A98A8;margin-top:5px">Default US$52M = the Dragone proposal as reported by GSM (sold at US$32M, US$52M all-in).</div>
       </div>
 
       <div class="panel">
@@ -291,7 +288,6 @@ var A={
   positioning:1.10, netRealization:0.78,
   seats:1200, shows:300, occupancy:0.65,
   paybackYears:5, margin:0.15,
-  benchmarkQuote:52, benchmarkLabel:'Dragone proposal — sold at US$32M, US$52M all-in (per GSM, Jul 2026)',
   cdaProduction:0, cdaOpex:0
 };
 var SEAT_OPTS=[800,1000,1200,1500,2000,2500,3000,3500];
@@ -493,7 +489,6 @@ function syncControls(){
   document.getElementById('occ').value=Math.round(A.occupancy*100);
   document.getElementById('payback').value=A.paybackYears;
   document.getElementById('margin').value=Math.round(A.margin*100);
-  document.getElementById('bmq').value=A.benchmarkQuote||0;
   document.getElementById('cdaProd').value=A.cdaProduction||0;
   document.getElementById('cdaOpex').value=A.cdaOpex||0;
 }
@@ -565,20 +560,6 @@ function buildInfog(){
     s+='</svg>';
     return s;
   }
-  // ---- discipline bar: max investment vs $52M quote ----
-  function disciplineBar(){
-    var inv=R.maxInvestmentUSD/1e6,quote=A.benchmarkQuote,W=560,bh=26;
-    if(!quote||quote<=inv)return '';
-    var wq=W-80,wi=Math.max((inv/quote)*wq,30);
-    var s='<svg viewBox="0 0 '+(W+10)+' 96" style="width:100%">';
-    s+='<rect x="0" y="8" width="'+wq+'" height="'+bh+'" rx="6" fill="#F3E3E2" stroke="#E4BDB9"/>';
-    s+='<text x="8" y="25" font-size="10" font-weight="800" fill="#B3403A">US$'+quote+'M — THE ALL-IN VENDOR QUOTE</text>';
-    s+='<rect x="0" y="52" width="'+wi+'" height="'+bh+'" rx="6" fill="'+GREEN+'"/>';
-    s+='<text x="'+(wi+10)+'" y="69" font-size="10.5" font-weight="800" fill="'+GREEN+'">US$'+inv.toFixed(1)+'M — WHAT THIS MARKET CAN PAY BACK</text>';
-    s+='<text x="'+(wq-2)+'" y="47" text-anchor="end" font-size="8.5" fill="'+MUT+'">'+(quote/inv).toFixed(1)+'× smaller — that is the discipline</text>';
-    s+='</svg>';
-    return s;
-  }
   // ---- small stroke icons ----
   function ic(path){return '<svg viewBox="0 0 24 24" style="width:19px;height:19px;vertical-align:-4px;margin-right:7px"><g fill="none" stroke="'+AMBER+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+path+'</g></svg>';}
   var icCal=ic('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>');
@@ -630,12 +611,6 @@ function buildInfog(){
    +'<div style="font-size:29px;font-weight:800;color:'+NAVY+'">US$'+(R.maxInvestmentUSD/1e6).toFixed(1)+'M</div>'
    +'<div style="font-size:11.5px;color:'+MUT+';margin-top:4px">The one-time budget cap — required profit × payback years.</div></div>'
    +'</div>'
-
-   // ======= discipline bar =======
-   +(A.benchmarkQuote&&A.benchmarkQuote>R.maxInvestmentUSD/1e6?('<div style="margin-top:14px;background:#fff;border:1px solid '+LINE+';border-radius:14px;padding:16px 20px">'
-   +plabel('','WHY THE GATES MATTER')
-   +disciplineBar()
-   +'<div style="font-size:9.5px;color:#8A98A8;margin-top:6px">Benchmark: '+(A.benchmarkLabel||'vendor quote, editable in Board Requirements')+'</div></div>'):'')
 
    // ======= CDA check =======
    +(function(){
