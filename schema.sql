@@ -89,6 +89,34 @@ CREATE TABLE IF NOT EXISTS scenarios (
 );
 CREATE INDEX IF NOT EXISTS idx_scenarios_user ON scenarios(user_id);
 
+-- ============ OPPORTUNITIES (Decision Portfolio — Module 2) ============
+CREATE TABLE IF NOT EXISTS opportunities (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  name VARCHAR(160) NOT NULL,
+  city VARCHAR(80) NOT NULL,
+  otype VARCHAR(40) DEFAULT 'new-show',      -- new-show | attraction | venue | partnership | phase2-revenue | other
+  sponsor VARCHAR(120),
+  objective TEXT,
+  strategic_link TEXT,
+  est_investment NUMERIC,                    -- US$M
+  est_timeline VARCHAR(60),
+  scores JSONB DEFAULT '{}',                 -- {strategic:0-5, market:0-5, financial:0-5, capability:0-5, risk:0-5}
+  status VARCHAR(20) DEFAULT 'proposed',     -- proposed | scored | go | parked | rejected
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Example charters (demo seeds — delete freely)
+INSERT INTO opportunities (name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores, status)
+SELECT * FROM (VALUES
+  ('Flagship theatrical show — downtown','Ho Chi Minh City','new-show','GSM BD','Permanent resident show anchored on the constraint sheet for HCMC','Entertainment pillar; feeds hotel & F&B nights',5.2,'18-24 months','{"strategic":5,"market":4,"financial":4,"capability":3,"risk":3}'::jsonb,'scored'),
+  ('Anchor show — Da Nang market gap','Da Nang','new-show','GSM BD','Fill the permanent-show whitespace (~11M visitors, no theatrical anchor)','Sun World Ba Na Hills cross-sell; Da Nang Downtown synergy',4.3,'18 months','{"strategic":5,"market":4,"financial":3,"capability":3,"risk":2}'::jsonb,'scored'),
+  ('Kiss of the Sea — phase-2 revenue build','Phu Quoc','phase2-revenue','GSM Ops','Add sponsorship, F&B and merchandising layers to the existing show','Existing asset; margin structures separate from tickets',0.8,'6 months','{"strategic":4,"market":3,"financial":4,"capability":5,"risk":4}'::jsonb,'proposed'),
+  ('Venue partnership — Hanoi opera scene','Hanoi','partnership','GSM BD','Co-programming agreement instead of new build; test market before capex','Low-capex entry to northern market',1.5,'9 months','{"strategic":3,"market":3,"financial":3,"capability":4,"risk":4}'::jsonb,'proposed')
+) AS v(name,city,otype,sponsor,objective,strategic_link,est_investment,est_timeline,scores,status)
+WHERE NOT EXISTS (SELECT 1 FROM opportunities);
+
 -- ============ SEED DATA — July 2026 research first pass ============
 -- Sources: GSO/HCMC Dept of Tourism, VNAT, FocusEconomics, JLL, OTA scan (July 21-26, 2026).
 -- L-confidence competitor prices are placeholders pending the v2 model rate-card verification.
