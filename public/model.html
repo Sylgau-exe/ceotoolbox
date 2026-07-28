@@ -123,7 +123,7 @@
         <label class="slab" style="margin-top:2px">Theater size (seats)</label>
         <div class="seatrow" id="seatRow"></div>
         <label class="slab">Shows per year <span class="v" id="showsV"></span></label>
-        <input type="range" id="shows" min="250" max="300" step="2" oninput="recalc()">
+        <input type="range" id="shows" min="100" max="624" step="2" oninput="recalc()">
         <label class="slab">Occupancy commitment <span class="v" id="occV"></span></label>
         <input type="range" id="occ" min="40" max="85" step="1" oninput="recalc()">
       </div>
@@ -161,7 +161,7 @@
       </div>
 
       <div class="panel senspanel">
-        <div class="ptitle"><span>SENSITIVITY — max production investment (US$M), seats × shows/yr</span></div>
+        <div class="ptitle"><span>SENSITIVITY — max production investment (US$M), seats × shows/week</span></div>
         <div class="sens" id="sens"></div>
       </div>
 
@@ -209,7 +209,7 @@ var A={
   seats:1200, shows:300, occupancy:0.65,
   paybackYears:5, margin:0.15
 };
-var SEAT_OPTS=[800,1000,1200,1500,2000];
+var SEAT_OPTS=[800,1000,1200,1500,2000,2500,3000,3500];
 
 /* ===================== ENGINE-START =====================
    v2 logic — driven by the CEO's answers, tickets only.   */
@@ -255,9 +255,13 @@ function renderComp(){
   }).join('');
 }
 function renderSeats(){
+  var isPreset=SEAT_OPTS.indexOf(A.seats)>=0;
   document.getElementById('seatRow').innerHTML=SEAT_OPTS.map(function(s){
     return '<button class="seatbtn'+(s===A.seats?' on':'')+'" onclick="A.seats='+s+';renderSeats();recalc()">'+s.toLocaleString('en-US')+'</button>';
-  }).join('');
+  }).join('')
+  +'<input type="number" id="seatCustom" min="200" max="5000" step="50" placeholder="custom" value="'+(isPreset?'':A.seats)+'"'
+  +' style="flex:1;min-width:84px;padding:9px 10px;border:1.5px solid '+(isPreset?'var(--line)':'var(--navy)')+';border-radius:9px;font-size:13.5px;font-weight:700;text-align:center"'
+  +' onchange="var v=Number(this.value)||0;if(v>=200&&v<=5000){A.seats=Math.round(v);renderSeats();recalc();}">';
 }
 
 var R=null;
@@ -271,7 +275,7 @@ function recalc(){
   R=computeModel(A);
   document.getElementById('posV').textContent=(A.positioning*100).toFixed(0)+'% of weighted ref';
   document.getElementById('netrV').textContent=(A.netRealization*100).toFixed(0)+'%';
-  document.getElementById('showsV').textContent=A.shows;
+  document.getElementById('showsV').textContent=A.shows+'/yr  (≈ '+(A.shows/52).toFixed(1)+'/week)';
   document.getElementById('occV').textContent=(A.occupancy*100).toFixed(0)+'%';
   document.getElementById('paybackV').textContent=A.paybackYears+' years';
   document.getElementById('marginV').textContent=(A.margin*100).toFixed(0)+'%';
@@ -286,16 +290,22 @@ function recalc(){
 }
 
 function renderSens(){
-  var showsOpts=[250,260,270,280,290,300];
-  var vals=[],rows=SEAT_OPTS.map(function(s){
+  var weekOpts=[3,4,5,6,8,10,12];
+  var showsOpts=weekOpts.map(function(w){return w*52});
+  var seatList=SEAT_OPTS.slice();
+  if(seatList.indexOf(A.seats)<0){seatList.push(A.seats);seatList.sort(function(a,b){return a-b});}
+  var vals=[],rows=seatList.map(function(s){
     return showsOpts.map(function(sh){
       var a=Object.assign({},A,{seats:s,shows:sh});
       var v=computeModel(a).maxInvestmentUSD/1e6;vals.push(v);return v;
     });
   });
   var min=Math.min.apply(null,vals),max=Math.max.apply(null,vals),rng=(max-min)||1;
-  var html='<table><tr><th>seats \\ shows</th>'+showsOpts.map(function(s){return '<th>'+s+'</th>'}).join('')+'</tr>';
-  SEAT_OPTS.forEach(function(s,ri){
+  var html='<table><tr><th>seats \\ shows/wk</th>'+weekOpts.map(function(w){return '<th>'+w+'/wk<div style=\"font-weight:400;color:inherit;opacity:.65;font-size:10px\">'+(w*52)+'/yr</div></th>'}).join('')+'</tr>';
+  // nearest cell to current selection
+  var nearSeat=seatList.reduce(function(p,c){return Math.abs(c-A.seats)<Math.abs(p-A.seats)?c:p});
+  var nearShow=showsOpts.reduce(function(p,c){return Math.abs(c-A.shows)<Math.abs(p-A.shows)?c:p});
+  seatList.forEach(function(s,ri){
     html+='<tr><th>'+s.toLocaleString('en-US')+'</th>';
     showsOpts.forEach(function(sh,ci){
       var v=rows[ri][ci],t=(v-min)/rng;
@@ -303,7 +313,7 @@ function renderSens(){
       var L=0.95-t*0.52;
       var bg='oklch('+L.toFixed(3)+' '+(0.02+t*0.09).toFixed(3)+' 250)';
       var ink=t>0.55?'#fff':'#22303F';
-      var sel=(s===A.seats&&sh===A.shows)?' class="sel"':'';
+      var sel=(s===nearSeat&&sh===nearShow)?' class="sel"':'';
       html+='<td'+sel+' style="background:'+bg+';color:'+ink+'">'+v.toFixed(1)+'</td>';
     });
     html+='</tr>';
@@ -365,7 +375,7 @@ function applyScenario(inputs,scity){
   toast('Scenario loaded.');
 }
 function syncControls(){
-  document.getElementById('pos').value=Math.round(A.positioning*100);
+  document.getElementById('pos').value=A.positioning*100;
   document.getElementById('netr').value=Math.round(A.netRealization*100);
   document.getElementById('shows').value=A.shows;
   document.getElementById('occ').value=Math.round(A.occupancy*100);
