@@ -205,9 +205,9 @@
   </div>
 </main>
 
-<button class="coachbtn" id="coachBtn" onclick="toggleCoach()">✦ AI Coach</button>
+<button class="coachbtn" id="coachBtn" onclick="toggleCoach()" style="display:flex;align-items:center;gap:9px"><span id="coachBtnAv"></span>Coach Minh</button>
 <div class="coach" id="coachPanel">
-  <div class="chead2"><div><b>✦ AI Coach</b><span>Scenario interviewer · data analyst</span></div><button class="cx" onclick="toggleCoach()">×</button></div>
+  <div class="chead2"><div style="display:flex;align-items:center;gap:11px"><span id="coachHeadAv"></span><div><b>Minh — your decision coach</b><span>Scenario interviewer · data analyst</span></div></div><button class="cx" onclick="toggleCoach()">×</button></div>
   <div class="cmsgs" id="cmsgs"></div>
   <div class="cchips">
     <button onclick="coachQuick('interview')">🎤 Interview me to build a scenario</button>
@@ -536,18 +536,45 @@ async function newProject(){
   }catch(e){toast('Could not create project: '+e.message);renderProjSel();}
 }
 
+
+// ---- Coach Minh avatar (inline SVG) ----
+var MINH_SVG='<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">'
+ +'<circle cx="48" cy="48" r="46" fill="#EDF2F8"/>'
+ +'<path d="M14 82c4-18 16-26 34-26s30 8 34 26l-2 6H16z" fill="#1E3A5F"/>'
+ +'<path d="M40 60h16l-4 10h-8z" fill="#fff"/>'
+ +'<path d="M44 70h8l2 14h-12z" fill="#D9A441"/>'
+ +'<circle cx="48" cy="38" r="20" fill="#F2C79B"/>'
+ +'<path d="M28 34c1-13 9-19 20-19s19 6 20 19c-2-4-6-6-9-6 2 2 2 4 2 4s-6-5-13-5-13 5-13 5 0-2 2-4c-3 0-7 2-9 6z" fill="#1B2430"/>'
+ +'<circle cx="40" cy="38" r="7.5" fill="none" stroke="#1B2430" stroke-width="2.2"/>'
+ +'<circle cx="56" cy="38" r="7.5" fill="none" stroke="#1B2430" stroke-width="2.2"/>'
+ +'<path d="M47.5 38h1M32.5 36l-4-1M63.5 36l4-1" stroke="#1B2430" stroke-width="2.2" stroke-linecap="round"/>'
+ +'<circle cx="40" cy="39" r="2.2" fill="#1B2430"/>'
+ +'<circle cx="56" cy="39" r="2.2" fill="#1B2430"/>'
+ +'<path d="M42 50c2 2 4 2.6 6 2.6s4-.6 6-2.6" fill="none" stroke="#B3403A" stroke-width="2.4" stroke-linecap="round"/>'
+ +'<path d="M35 30c1.5-1.5 4-2 6-1.5M55 28.5c2-.5 4.5 0 6 1.5" stroke="#1B2430" stroke-width="2" stroke-linecap="round" fill="none"/>'
+ +'</svg>';
+function minhImg(size){return '<span style="display:inline-block;width:'+size+'px;height:'+size+'px;border-radius:50%;overflow:hidden;flex:none;background:#EDF2F8">'+MINH_SVG+'</span>';}
+
 // ---------------- AI Coach ----------------
 var CHAT=[];
 function toggleCoach(){
   var p=document.getElementById('coachPanel');p.classList.toggle('open');
   if(p.classList.contains('open')&&!CHAT.length){
-    addMsg('ai',"I'm your decision coach for "+city+(projectName?(' — '+decodeURIComponent(projectName)):'')+".\n\nI can interview you step by step to build a scenario, or analyze the one on screen against the market data. Pick a shortcut below or just ask.");
+    addMsg('ai',"Chào anh! I'm Minh, your decision coach for "+city+(projectName?(' — '+decodeURIComponent(projectName)):'')+".\n\nI can interview you step by step to build a scenario, or analyze the one on screen against the market data. Pick a shortcut below, or just ask.");
   }
 }
 function addMsg(role,text,settings){
   var box=document.getElementById('cmsgs');
   var d=document.createElement('div');d.className='cm '+(role==='user'?'user':'ai');
   d.textContent=text;
+  if(role!=='user'){
+    var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:flex-end;max-width:94%';
+    var av=document.createElement('span');av.innerHTML=minhImg(26);
+    row.appendChild(av);row.appendChild(d);
+    if(settings){var b0=document.createElement('button');b0.className='applybtn';b0.textContent='✓ Apply these settings to the model';
+      b0.onclick=function(){applyCoachSettings(settings);b0.textContent='✓ Applied';b0.disabled=true;};d.appendChild(b0);}
+    box.appendChild(row);box.scrollTop=box.scrollHeight;return;
+  }
   if(settings){
     var b=document.createElement('button');b.className='applybtn';b.textContent='✓ Apply these settings to the model';
     b.onclick=function(){applyCoachSettings(settings);b.textContent='✓ Applied';b.disabled=true;};
@@ -585,7 +612,7 @@ async function coachSend(){
   inp.value='';addMsg('user',text);
   CHAT.push({role:'user',content:text});
   var btn=document.getElementById('csend');btn.disabled=true;
-  var thinking=document.createElement('div');thinking.className='cm ai';thinking.textContent='…';
+  var thinking=document.createElement('div');thinking.className='cm ai';thinking.innerHTML=minhImg(20)+' <i>Minh is thinking…</i>';
   document.getElementById('cmsgs').appendChild(thinking);
   try{
     var r=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
@@ -606,6 +633,8 @@ async function coachSend(){
 
 // ---- init ----
 applyCityWeights();renderCity();renderComp();renderSeats();syncControls();recalc();loadLive();loadProjects();
+document.getElementById('coachBtnAv').innerHTML=minhImg(30);
+document.getElementById('coachHeadAv').innerHTML=minhImg(38);
 if(projectName){var pc=document.getElementById('projChip');pc.textContent='📁 '+decodeURIComponent(projectName);pc.style.display='inline-block';}
 </script>
 </body>
