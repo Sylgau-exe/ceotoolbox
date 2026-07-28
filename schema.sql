@@ -122,5 +122,25 @@ INSERT INTO indicators (city, code, name, category, period, period_date, value, 
 ('Vietnam','cultural_industries_strategy','National cultural-industries strategy','policy','2025-11','2025-11-30',NULL,'Performing arts named a priority sector in the November 2025 national cultural-industries strategy — leverage for licensing, land and incentives.',NULL,'Government of Vietnam (Nov 2025 strategy)','https://chinhphu.vn','H',NULL,'2026-07-21')
 ON CONFLICT (city, code, period) DO NOTHING;
 
+-- ============ TREND BACKFILL — historical series for key indicators (July 2026 research) ============
+INSERT INTO indicators (city, code, name, category, period, period_date, value, value_text, unit, source, source_url, confidence, notes, collected_at) VALUES
+-- Vietnam national international arrivals (recovery curve)
+('Vietnam','intl_arrivals','International arrivals (national)','tourism','2019','2019-12-31',18000000,NULL,'visitors/yr','VNAT (pre-COVID peak)','https://vietnamtourism.gov.vn/en/statistic','M','Pre-COVID reference year','2026-07-28'),
+('Vietnam','intl_arrivals','International arrivals (national)','tourism','2022','2022-12-31',3700000,NULL,'visitors/yr','VNAT','https://vietnamtourism.gov.vn/en/statistic','M','Reopening year','2026-07-28'),
+('Vietnam','intl_arrivals','International arrivals (national)','tourism','2023','2023-12-31',12600000,NULL,'visitors/yr','VNAT','https://vietnamtourism.gov.vn/en/statistic','M',NULL,'2026-07-28'),
+('Vietnam','intl_arrivals','International arrivals (national)','tourism','2024','2024-12-31',17500000,NULL,'visitors/yr','VNAT (+40% YoY)','https://b-company.jp/vietnam-tourism-in-2024-and-outlooks-for-2025/','M','Korea 4.1M top market; China 3.4M recovering','2026-07-28'),
+('Vietnam','intl_arrivals','International arrivals (national)','tourism','2025','2025-12-31',21000000,NULL,'visitors/yr','VNAT via VietnamPlus','https://en.vietnamplus.vn/vietnam-welcomes-more-than-19-million-international-visitors-in-11-months-post333894.vnp','M','19M+ through Nov 2025; full-year estimate — record year','2026-07-28'),
+-- HCMC international arrivals (recovery to pre-COVID)
+('Ho Chi Minh City','intl_arrivals','International arrivals','tourism','2019','2019-12-31',8600000,NULL,'visitors/yr','HCMC Dept of Tourism (pre-COVID)',NULL,'M','Pre-COVID peak — 2025 = full recovery','2026-07-28'),
+('Ho Chi Minh City','intl_arrivals','International arrivals','tourism','2024','2024-12-31',6100000,NULL,'visitors/yr','HCMC Dept of Tourism','https://b-company.jp/vietnam-tourism-in-2024-and-outlooks-for-2025/','M','38M domestic same year','2026-07-28'),
+-- Da Nang total visitors
+('Da Nang','total_visitors','Total visitors (intl + domestic)','tourism','2023','2023-12-31',8200000,NULL,'visitors/yr','Derived from +32.8% YoY (VietnamPlus)','https://en.vietnamplus.vn/da-nang-looks-to-attract-119-million-tourists-in-2025-post307707.vnp','M','Back-calculated from 2024 growth rate','2026-07-28'),
+-- Vietnam inflation (yearly CPI)
+('Vietnam','inflation_yoy','Inflation (CPI, year-over-year)','economy','2023','2023-12-31',3.25,NULL,'%','GSO annual CPI',NULL,'M',NULL,'2026-07-28'),
+('Vietnam','inflation_yoy','Inflation (CPI, year-over-year)','economy','2024','2024-12-31',3.63,NULL,'%','GSO annual CPI',NULL,'M','Rising trend into 2026','2026-07-28'),
+-- China source market share trend
+('Vietnam','china_source_share','China share of international arrivals','tourism','2024','2024-12-31',19,NULL,'%','Derived: 3.4M of 17.5M (VNAT)','https://b-company.jp/vietnam-tourism-in-2024-and-outlooks-for-2025/','M','Doubled from 1.5M in 2023','2026-07-28')
+ON CONFLICT (city, code, period) DO NOTHING;
+
 -- Verify
 SELECT category, COUNT(*) FROM indicators GROUP BY category ORDER BY category;
