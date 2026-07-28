@@ -46,12 +46,27 @@ CREATE INDEX IF NOT EXISTS idx_indicators_city ON indicators(city);
 CREATE INDEX IF NOT EXISTS idx_indicators_code ON indicators(city, code, period_date);
 CREATE INDEX IF NOT EXISTS idx_indicators_category ON indicators(category);
 
+-- ============ PROJECTS (Project Alpha — Da Nang, Project Delta — HCMC, ...) ============
+CREATE TABLE IF NOT EXISTS projects (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(120) NOT NULL,
+  code VARCHAR(30),
+  city VARCHAR(80) NOT NULL,
+  status VARCHAR(30) DEFAULT 'exploration',   -- exploration | constraints-set | vendor-rfp | on-hold
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
+
 -- ============ SAVED SCENARIOS (Module 1 decision tool) ============
 CREATE TABLE IF NOT EXISTS scenarios (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   city VARCHAR(80) NOT NULL,
   name VARCHAR(255) NOT NULL,
+  project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
   inputs JSONB NOT NULL,                -- levers + board requirements + assumptions
   outputs JSONB NOT NULL,               -- computed revenue + the two constraints
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

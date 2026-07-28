@@ -67,6 +67,28 @@
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;border-radius:9px;padding:11px 20px;font-size:13.5px;display:none;z-index:60;box-shadow:0 10px 30px rgba(10,25,47,.35)}
   .vendors{margin-top:16px;background:#EDF2F8;border:1px solid #DBE5EF;border-radius:10px;padding:12px 16px;font-size:13px;color:var(--navy);font-weight:600;text-align:center}
   footer{text-align:center;color:#9AA8B8;font-size:11.5px;padding:26px}
+
+  /* ---- AI Coach ---- */
+  .coachbtn{position:fixed;bottom:24px;right:24px;z-index:45;background:var(--navy);color:#fff;border:0;border-radius:99px;padding:13px 22px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 12px 30px rgba(10,25,47,.35)}
+  .coachbtn:hover{background:var(--navy2)}
+  .coach{position:fixed;top:0;right:-420px;width:400px;max-width:94vw;height:100%;background:#fff;border-left:1px solid var(--line);z-index:55;display:flex;flex-direction:column;transition:right .25s ease;box-shadow:-14px 0 40px rgba(10,25,47,.18)}
+  .coach.open{right:0}
+  .coach .chead2{background:var(--navy);color:#fff;padding:15px 18px;display:flex;justify-content:space-between;align-items:center}
+  .coach .chead2 b{font-size:14.5px}
+  .coach .chead2 span{font-size:11px;color:#B9C7D8;display:block;margin-top:2px}
+  .coach .cx{background:none;border:0;color:#C9D6E5;font-size:20px;cursor:pointer}
+  .cmsgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#F7F9FB}
+  .cm{max-width:88%;padding:10px 13px;border-radius:12px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+  .cm.user{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:4px}
+  .cm.ai{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+  .cm.ai .applybtn{margin-top:9px;display:block;background:#2F7D52;color:#fff;border:0;border-radius:8px;padding:8px 13px;font-size:12.5px;font-weight:700;cursor:pointer}
+  .cchips{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 8px;background:#F7F9FB}
+  .cchips button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--steel)}
+  .cchips button:hover{border-color:var(--steel)}
+  .cinput{display:flex;gap:8px;padding:13px 16px;border-top:1px solid var(--line);background:#fff}
+  .cinput textarea{flex:1;resize:none;height:44px;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:13.5px;font-family:inherit}
+  .cinput button{background:var(--navy);color:#fff;border:0;border-radius:9px;padding:0 16px;font-weight:800;cursor:pointer}
+  .cinput button:disabled{opacity:.5}
   /* ---- print: Concept Constraint Sheet only ---- */
   #sheet{display:none}
   @media print{
@@ -98,7 +120,7 @@
   <div class="hright"><a href="app.html">Home</a><a href="dashboard.html" id="dashLink">Market Intelligence</a><a onclick="signOut()" style="cursor:pointer">Sign out</a></div>
 </header>
 <main>
-  <h1>Vietnam Market Business Model</h1>
+  <h1>Vietnam Market Business Model <span id="projChip" style="display:none;font-size:11px;font-weight:800;letter-spacing:.8px;background:#EDF2F8;color:#5B7A9D;border-radius:99px;padding:4px 12px;vertical-align:middle;margin-left:8px"></span></h1>
   <div class="sub">One model, any city. Driven by your answers — it sets the boundaries vendors must design within.</div>
   <div class="cityrow" id="cityRow"></div>
 
@@ -177,6 +199,20 @@
     </div>
   </div>
 </main>
+
+<button class="coachbtn" id="coachBtn" onclick="toggleCoach()">✦ AI Coach</button>
+<div class="coach" id="coachPanel">
+  <div class="chead2"><div><b>✦ AI Coach</b><span>Scenario interviewer · data analyst</span></div><button class="cx" onclick="toggleCoach()">×</button></div>
+  <div class="cmsgs" id="cmsgs"></div>
+  <div class="cchips">
+    <button onclick="coachQuick('interview')">🎤 Interview me to build a scenario</button>
+    <button onclick="coachQuick('analyze')">🔍 Analyze my current scenario</button>
+  </div>
+  <div class="cinput">
+    <textarea id="cin" placeholder="Ask the coach…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();coachSend();}"></textarea>
+    <button id="csend" onclick="coachSend()">→</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- ============ PRINT-ONLY: CONCEPT CONSTRAINT SHEET ============ -->
@@ -195,6 +231,8 @@ function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style
 var CITIES=['Ho Chi Minh City','Hanoi','Da Nang','Nha Trang','Phu Quoc'];
 var params=new URLSearchParams(location.search);
 var city=params.get('city')||'Ho Chi Minh City';
+var projectId=Number(params.get('project'))||null;
+var projectName=params.get('pname')||null;
 if(CITIES.indexOf(city)<0)CITIES.push(city);
 
 // ---- Default assumptions (placeholders pending v2 rate-card verification; L = replace from live base) ----
@@ -278,7 +316,7 @@ function renderSeats(){
   +' onchange="var v=Number(this.value)||0;if(v>=200&&v<=5000){A.seats=Math.round(v);renderSeats();recalc();}">';
 }
 
-var R=null;
+var R=null;var LIVEDATA=null;
 function recalc(){
   A.positioning=Number(document.getElementById('pos').value)/100;
   A.netRealization=Number(document.getElementById('netr').value)/100;
@@ -343,6 +381,7 @@ async function loadLive(){
     if(r.status===401){signOut();return;}
     if(!r.ok)return; // model still works on defaults
     var data=await r.json();
+    LIVEDATA=data;
     var live=false;
     (data.competitorTickets||[]).forEach(function(t){
       A.competitors.forEach(function(c){
@@ -363,7 +402,7 @@ async function saveScenario(){
   if(!name)return;
   try{
     var r=await fetch('/api/scenarios',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
-      body:JSON.stringify({city:city,name:name,inputs:A,outputs:{revenueUSD:R.revenueUSD,opexCeilingUSD:R.opexCeilingUSD,maxInvestmentUSD:R.maxInvestmentUSD,netTicket:R.netTicket}})});
+      body:JSON.stringify({city:city,name:name,project_id:projectId,inputs:A,outputs:{revenueUSD:R.revenueUSD,opexCeilingUSD:R.opexCeilingUSD,maxInvestmentUSD:R.maxInvestmentUSD,netTicket:R.netTicket}})});
     if(!r.ok)throw new Error((await r.json()).error||r.status);
     toast('Scenario saved.');
   }catch(e){toast('Save failed: '+e.message);}
@@ -420,8 +459,78 @@ function buildSheet(){
 }
 function printSheet(){buildSheet();window.print();}
 
+
+// ---------------- AI Coach ----------------
+var CHAT=[];
+function toggleCoach(){
+  var p=document.getElementById('coachPanel');p.classList.toggle('open');
+  if(p.classList.contains('open')&&!CHAT.length){
+    addMsg('ai',"I'm your decision coach for "+city+(projectName?(' — '+decodeURIComponent(projectName)):'')+".\n\nI can interview you step by step to build a scenario, or analyze the one on screen against the market data. Pick a shortcut below or just ask.");
+  }
+}
+function addMsg(role,text,settings){
+  var box=document.getElementById('cmsgs');
+  var d=document.createElement('div');d.className='cm '+(role==='user'?'user':'ai');
+  d.textContent=text;
+  if(settings){
+    var b=document.createElement('button');b.className='applybtn';b.textContent='✓ Apply these settings to the model';
+    b.onclick=function(){applyCoachSettings(settings);b.textContent='✓ Applied';b.disabled=true;};
+    d.appendChild(b);
+  }
+  box.appendChild(d);box.scrollTop=box.scrollHeight;
+}
+function applyCoachSettings(st){
+  if(st.seats)A.seats=Math.round(st.seats);
+  if(st.shows)A.shows=Math.round(st.shows);
+  if(st.occupancy!=null)A.occupancy=st.occupancy>1?st.occupancy/100:st.occupancy;
+  if(st.positioning!=null)A.positioning=st.positioning>3?st.positioning/100:st.positioning;
+  if(st.netRealization!=null)A.netRealization=st.netRealization>1?st.netRealization/100:st.netRealization;
+  if(st.paybackYears)A.paybackYears=Math.round(st.paybackYears);
+  if(st.margin!=null)A.margin=st.margin>1?st.margin/100:st.margin;
+  renderSeats();syncControls();recalc();toast('Coach settings applied.');
+}
+function coachContext(){
+  var inds=null;
+  if(LIVEDATA&&LIVEDATA.indicators){inds=LIVEDATA.indicators.map(function(i){var l=i.latest;return i.name+': '+(l.value!=null?l.value+(l.unit?' '+l.unit:''):l.value_text)+' ['+l.confidence+', '+l.period+']';}).slice(0,20);}
+  return {city:city,project:projectName?decodeURIComponent(projectName):null,
+    assumptions:{seats:A.seats,showsPerYear:A.shows,occupancy:A.occupancy,positioning:A.positioning,netRealization:A.netRealization,paybackYears:A.paybackYears,margin:A.margin,fx:A.fx,
+      competitors:A.competitors.map(function(c){return c.name+' w'+(c.weight*100).toFixed(0)+'% @'+c.price+' VND ('+c.conf+')';})},
+    results:R?{netTicketVND:Math.round(R.netTicket),revenueUSD:Math.round(R.revenueUSD),opexCeilingUSD:Math.round(R.opexCeilingUSD),maxInvestmentUSD:Math.round(R.maxInvestmentUSD),attendancePerYear:Math.round(R.attendance)}:null,
+    marketIndicators:inds};
+}
+function coachQuick(kind){
+  var t=kind==='interview'
+    ?'Interview me to build a scenario for this city. Ask one question at a time.'
+    :'Analyze my current scenario against the market data and benchmarks. Be direct about weak assumptions.';
+  document.getElementById('cin').value=t;coachSend();
+}
+async function coachSend(){
+  var inp=document.getElementById('cin');var text=inp.value.trim();if(!text)return;
+  inp.value='';addMsg('user',text);
+  CHAT.push({role:'user',content:text});
+  var btn=document.getElementById('csend');btn.disabled=true;
+  var thinking=document.createElement('div');thinking.className='cm ai';thinking.textContent='…';
+  document.getElementById('cmsgs').appendChild(thinking);
+  try{
+    var r=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({messages:CHAT,context:coachContext()})});
+    var data=await r.json();
+    thinking.remove();
+    if(!r.ok){addMsg('ai','⚠ '+(data.error||'Coach unavailable.'));btn.disabled=false;return;}
+    var reply=data.reply||'';
+    CHAT.push({role:'assistant',content:reply});
+    var settings=null;
+    var sm=reply.match(/```settings\s*([\s\S]*?)```/);
+    if(sm){try{settings=JSON.parse(sm[1]);}catch(e){}
+      reply=reply.replace(/```settings[\s\S]*?```/,'').trim();}
+    addMsg('ai',reply,settings);
+  }catch(e){thinking.remove();addMsg('ai','⚠ Network error — try again.');}
+  btn.disabled=false;
+}
+
 // ---- init ----
 applyCityWeights();renderCity();renderComp();renderSeats();syncControls();recalc();loadLive();
+if(projectName){var pc=document.getElementById('projChip');pc.textContent='📁 '+decodeURIComponent(projectName);pc.style.display='inline-block';}
 </script>
 </body>
 </html>

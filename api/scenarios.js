@@ -14,22 +14,21 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const result = await sql`
-        SELECT id, city, name, inputs, outputs, created_at
-        FROM scenarios WHERE user_id = ${decoded.userId}
-        ORDER BY created_at DESC LIMIT 50
-      `;
+      const pid = Number(req.query.project_id) || null;
+      const result = pid
+        ? await sql`SELECT id, city, name, project_id, inputs, outputs, created_at FROM scenarios WHERE user_id = ${decoded.userId} AND project_id = ${pid} ORDER BY created_at DESC LIMIT 50`
+        : await sql`SELECT id, city, name, project_id, inputs, outputs, created_at FROM scenarios WHERE user_id = ${decoded.userId} ORDER BY created_at DESC LIMIT 50`;
       return res.status(200).json({ scenarios: result.rows });
     }
 
     if (req.method === 'POST') {
-      const { city, name, inputs, outputs } = req.body || {};
+      const { city, name, inputs, outputs, project_id } = req.body || {};
       if (!city || !name || !inputs || !outputs) {
         return res.status(400).json({ error: 'city, name, inputs and outputs are required' });
       }
       const result = await sql`
-        INSERT INTO scenarios (user_id, city, name, inputs, outputs)
-        VALUES (${decoded.userId}, ${city}, ${name}, ${JSON.stringify(inputs)}, ${JSON.stringify(outputs)})
+        INSERT INTO scenarios (user_id, city, name, project_id, inputs, outputs)
+        VALUES (${decoded.userId}, ${city}, ${name}, ${project_id || null}, ${JSON.stringify(inputs)}, ${JSON.stringify(outputs)})
         RETURNING id, city, name, created_at
       `;
       return res.status(201).json({ scenario: result.rows[0] });
