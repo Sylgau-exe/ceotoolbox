@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   try {
     const result = await sql`
       SELECT city, code, name, category, period, period_date, value, value_text,
-             unit, source, source_url, confidence, notes, collected_at
+             unit, source, source_url, archive_url, confidence, notes, collected_at
       FROM indicators
       WHERE city = ${city} OR city = 'Vietnam'
       ORDER BY code, period_date ASC
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       }
       byKey[key].history.push({
         period: row.period, period_date: row.period_date, value: row.value === null ? null : Number(row.value),
-        value_text: row.value_text, unit: row.unit, source: row.source, source_url: row.source_url,
+        value_text: row.value_text, unit: row.unit, source: row.source, source_url: row.source_url, archive_url: row.archive_url,
         confidence: row.confidence, notes: row.notes, collected_at: row.collected_at
       });
     }

@@ -35,6 +35,10 @@
   .ttext{font-size:13.5px;color:var(--ink);line-height:1.5}
   .tmeta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:8px;border-top:1px solid #F0F3F7}
   .src{font-size:11px;color:#8A98A8;flex:1;min-width:120px}
+  .src a{color:#5B7A9D;text-decoration:none;font-weight:600}
+  .src a:hover{text-decoration:underline}
+  .bkp{font-size:10px;font-weight:700;color:#5B7A9D;border:1px solid #DBE5EF;border-radius:5px;padding:2px 6px;text-decoration:none}
+  .bkp:hover{background:#EDF2F8}
   .conf{font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px}
   .cH{background:#E7F2EB;color:var(--green)}.cM{background:#FBF3E1;color:#8A5A00}.cL{background:#FBEAE9;color:var(--red)}
   .fresh{font-size:10px;font-weight:700;border-radius:99px;padding:2px 8px}
@@ -162,7 +166,9 @@ function renderTiles(){
     return '<div class="tile'+(isText?' wide':'')+'">'
       +'<div class="tname"><span>'+ind.name+scope+'</span><span class="fresh '+f[0]+'">'+f[1]+'</span></div>'
       +body
-      +'<div class="tmeta"><span class="src">'+l.source+' · '+l.period+'</span><span class="conf c'+l.confidence+'">'+l.confidence+'</span></div>'
+      +'<div class="tmeta"><span class="src">'+(l.source_url?('<a href="'+l.source_url+'" target="_blank" rel="noopener">'+l.source+' ↗</a>'):l.source)+' · '+l.period+'</span>'
+      +(l.archive_url?('<a class="bkp" href="'+l.archive_url+'" target="_blank" rel="noopener">📎 backup</a>'):'')
+      +'<span class="conf c'+l.confidence+'">'+l.confidence+'</span></div>'
       +'</div>';
   }).join('');
   if(stale>0){showAlert(stale+' indicator'+(stale>1?'s':'')+' past the staleness threshold — flagged for the next collection run.',false);}
