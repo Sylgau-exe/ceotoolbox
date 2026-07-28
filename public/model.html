@@ -111,7 +111,7 @@
           <thead><tr><th>Competitive reference</th><th style="text-align:right">Weight</th><th style="text-align:right">Gross ticket (VND)</th></tr></thead>
           <tbody></tbody>
         </table>
-        <div style="font-size:11px;color:#8A98A8;margin-top:8px">Default weights reflect each reference's relevance to the selected city — edit freely; they auto-normalize.</div>
+        <div style="font-size:11px;color:#8A98A8;margin-top:8px">Reference price = average of each show's published adult tiers (tier-mix average). Weights reflect relevance to the selected city — edit freely; they auto-normalize.</div>
         <label class="slab">Positioning vs market <span class="v" id="posV"></span></label>
         <input type="range" id="pos" min="70" max="125" step="0.5" oninput="recalc()">
         <label class="slab">Net realization (commissions, discounting) <span class="v" id="netrV"></span></label>
@@ -201,12 +201,12 @@ if(CITIES.indexOf(city)<0)CITIES.push(city);
 var A={
   fx:26200,
   competitors:[
-    {key:'ticket_aoshow',           name:'A O Show (HCMC)',          weight:0.40, price:1808000, conf:'H'},
+    {key:'ticket_aoshow',           name:'A O Show (HCMC)',          weight:0.40, price:1230000, conf:'H'},
     {key:'ticket_hoian_memories',   name:'Hoi An Memories',          weight:0.25, price:700000,  conf:'L'},
     {key:'ticket_tinh_hoa_bac_bo',  name:'Tinh Hoa Bac Bo (Hanoi)',  weight:0.20, price:500000,  conf:'L'},
     {key:'ticket_kiss_of_the_sea',  name:'Kiss of the Sea (Phu Quoc)',weight:0.15, price:900000, conf:'L'}
   ],
-  positioning:0.875, netRealization:0.78,
+  positioning:1.10, netRealization:0.78,
   seats:1200, shows:300, occupancy:0.65,
   paybackYears:5, margin:0.15
 };
