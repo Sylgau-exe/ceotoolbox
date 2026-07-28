@@ -122,7 +122,12 @@
 <main>
   <h1>Vietnam Market Business Model <span id="projChip" style="display:none;font-size:11px;font-weight:800;letter-spacing:.8px;background:#EDF2F8;color:#5B7A9D;border-radius:99px;padding:4px 12px;vertical-align:middle;margin-left:8px"></span></h1>
   <div class="sub">One model, any city. Driven by your answers — it sets the boundaries vendors must design within.</div>
-  <div class="cityrow" id="cityRow"></div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px">
+    <span style="font-size:12.5px;font-weight:700;color:var(--steel)">PROJECT</span>
+    <select id="projSel" onchange="onProjSelect(this.value)" style="padding:8px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:13.5px;font-weight:600;color:var(--ink);background:#fff;min-width:230px"></select>
+    <a href="projects.html" style="font-size:12px;color:var(--steel);text-decoration:none;font-weight:600">manage ↗</a>
+  </div>
+  <div class="cityrow" id="cityRow" style="margin-top:12px"></div>
 
   <div class="cols">
     <!-- LEFT: inputs -->
@@ -409,10 +414,10 @@ async function saveScenario(){
 }
 async function loadScenarios(){
   try{
-    var r=await fetch('/api/scenarios',{headers:{Authorization:'Bearer '+token}});
+    var r=await fetch('/api/scenarios'+(projectId?('?project_id='+projectId):''),{headers:{Authorization:'Bearer '+token}});
     var data=await r.json();
     var el=document.getElementById('scenList');
-    if(!data.scenarios||!data.scenarios.length){el.innerHTML='<div style="margin-top:14px;color:#8A98A8;font-size:13px">No saved scenarios yet.</div>';return;}
+    if(!data.scenarios||!data.scenarios.length){el.innerHTML='<div style="margin-top:14px;color:#8A98A8;font-size:13px">No saved scenarios yet'+(projectId?' for this project':'')+'.</div>';return;}
     el.innerHTML='<div class="panel" style="margin-top:16px"><div class="ptitle"><span>SAVED SCENARIOS</span></div>'+data.scenarios.map(function(s){
       var o=s.outputs||{};
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #F0F3F7;font-size:13px">'
@@ -459,6 +464,50 @@ function buildSheet(){
 }
 function printSheet(){buildSheet();window.print();}
 
+
+// ---------------- Projects ----------------
+var PROJECTS=[];
+async function loadProjects(){
+  try{
+    var r=await fetch('/api/projects',{headers:{Authorization:'Bearer '+token}});
+    if(!r.ok)return;
+    PROJECTS=(await r.json()).projects||[];
+  }catch(e){PROJECTS=[];}
+  renderProjSel();
+}
+function renderProjSel(){
+  var sel=document.getElementById('projSel');
+  var opts=['<option value="">— Free exploration (no project)</option>'];
+  PROJECTS.forEach(function(p){
+    opts.push('<option value="'+p.id+'"'+(p.id===projectId?' selected':'')+'>'+p.name+(p.code?' ['+p.code+']':'')+' · '+p.city+'</option>');
+  });
+  opts.push('<option value="__new">＋ New project…</option>');
+  sel.innerHTML=opts.join('');
+}
+function onProjSelect(v){
+  if(v==='__new'){newProject();return;}
+  var pc=document.getElementById('projChip');
+  if(!v){projectId=null;projectName=null;pc.style.display='none';document.getElementById('scenList').innerHTML='';return;}
+  var p=PROJECTS.find(function(x){return x.id===Number(v)});
+  if(!p)return;
+  projectId=p.id;projectName=encodeURIComponent(p.name+(p.code?' ['+p.code+']':''));
+  pc.textContent='📁 '+p.name+(p.code?' ['+p.code+']':'');pc.style.display='inline-block';
+  if(p.city&&p.city!==city){setCity(p.city);}
+  document.getElementById('scenList').innerHTML='';
+  toast('Reviewing '+p.name+' — '+p.city+'. Saved scenarios attach to this project.');
+}
+async function newProject(){
+  var name=prompt('Project name (e.g. Project Alpha):');
+  if(!name){renderProjSel();return;}
+  var code=prompt('Short code (optional, e.g. ALPHA):')||'';
+  try{
+    var r=await fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({name:name.trim(),code:code.trim().toUpperCase(),city:city})});
+    if(!r.ok)throw new Error((await r.json()).error||r.status);
+    var p=(await r.json()).project;
+    PROJECTS.unshift(p);projectId=p.id;renderProjSel();onProjSelect(String(p.id));
+  }catch(e){toast('Could not create project: '+e.message);renderProjSel();}
+}
 
 // ---------------- AI Coach ----------------
 var CHAT=[];
@@ -529,7 +578,7 @@ async function coachSend(){
 }
 
 // ---- init ----
-applyCityWeights();renderCity();renderComp();renderSeats();syncControls();recalc();loadLive();
+applyCityWeights();renderCity();renderComp();renderSeats();syncControls();recalc();loadLive();loadProjects();
 if(projectName){var pc=document.getElementById('projChip');pc.textContent='📁 '+decodeURIComponent(projectName);pc.style.display='inline-block';}
 </script>
 </body>
