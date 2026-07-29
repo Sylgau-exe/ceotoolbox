@@ -1,6 +1,10 @@
 -- CEO Toolbox — DEMO DATASET · 6 in-progress projects (different phases) + 7 opportunity assessments
 -- ⚠ This clears the opportunities table first. Run in the Neon SQL Editor.
 
+-- ensure newer columns exist (older deployments may lack them)
+ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS assessment JSONB DEFAULT '{}';
+ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS viability JSONB;
+
 TRUNCATE opportunities RESTART IDENTITY;
 
 INSERT INTO opportunities
