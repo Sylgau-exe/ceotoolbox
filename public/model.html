@@ -129,7 +129,10 @@
   <div class="sub">One model, any city. Driven by your answers — it sets the boundaries vendors must design within.</div>
   <div id="viabBanner" style="display:none;margin-top:14px;background:#FFFBF0;border:2px dashed var(--amber);border-radius:11px;padding:12px 16px;font-size:13px;color:var(--ink);align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <span>🔎 <b>Viability check</b> for OA: <b id="viabName"></b> — set the levers and board requirements, then attach the result.</span>
-    <button class="btn" style="padding:9px 15px;font-size:12.5px" onclick="attachViability()">✓ Attach viability check to assessment</button>
+    <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" style="padding:9px 15px;font-size:12.5px;background:#fff" onclick="returnToOA()">← Return to OA</button>
+      <button class="btn" style="padding:9px 15px;font-size:12.5px" onclick="attachViability()">✓ Attach viability check to assessment</button>
+    </span>
   </div>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px">
     <span style="font-size:12.5px;font-weight:700;color:var(--steel)">PROJECT</span>
@@ -826,6 +829,7 @@ document.getElementById('coachBtnAv').innerHTML=minhImg(30);
 document.getElementById('coachHeadAv').innerHTML=minhImg(38);
 if(projectName){var pc=document.getElementById('projChip');pc.textContent='📁 '+decodeURIComponent(projectName);pc.style.display='inline-block';}
 if(oppId){document.getElementById('viabBanner').style.display='flex';document.getElementById('viabName').textContent=decodeURIComponent(oppName||('OA #'+oppId));}
+function returnToOA(){location.href='portfolio.html?open='+oppId;}
 async function attachViability(){
   if(!R){toast('Set the model first.');return;}
   try{
@@ -835,7 +839,11 @@ async function attachViability(){
     var r=await fetch('/api/opportunities',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(payload)});
     if(!r.ok)throw new Error((await r.json()).error||r.status);
     toast('Viability check attached to the assessment.');
-    setTimeout(function(){location.href='portfolio.html';},900);
+    // also keep it findable as a saved scenario (no project — free exploration)
+    try{await fetch('/api/scenarios',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({city:city,name:'Viability — '+decodeURIComponent(oppName||('OA #'+oppId)),project_id:null,inputs:A,
+        outputs:{revenueUSD:R.revenueUSD,opexCeilingUSD:R.opexCeilingUSD,maxInvestmentUSD:R.maxInvestmentUSD,netTicket:R.netTicket}})});}catch(e){}
+    setTimeout(function(){location.href='portfolio.html?open='+oppId;},900);
   }catch(e){toast('Attach failed: '+e.message);}
 }
 </script>

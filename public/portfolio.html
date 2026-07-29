@@ -286,8 +286,15 @@ try{var savedC=JSON.parse(localStorage.getItem('pf_criteria')||'null');if(savedC
 function slug(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,30)||('c'+CRITERIA.length);}
 var OPPS=[],FUNDS=[],view='cards',editing=null;
 var ROLE=null; // 'bd' | 'pm'
+var openParam=Number(new URLSearchParams(location.search).get('open'))||null;
+function attemptOpen(){
+  if(!openParam||!ROLE||!OPPS.length)return;
+  var o=OPPS.find(function(x){return x.id===openParam});
+  if(o){var id=openParam;openParam=null;history.replaceState(null,'','portfolio.html');openEdit(id);}
+}
 function setRole(r){
   ROLE=r;
+  try{sessionStorage.setItem('pf_role',r);}catch(e){}
   document.getElementById('roleGate').style.display='none';
   document.getElementById('roleLink').textContent=r==='bd'?'Role: BD leader (switch)':'Role: Portfolio leader (switch)';
   // BD: no ranking tab, no sidebar, no weights
@@ -296,7 +303,7 @@ function setRole(r){
   document.getElementById('pageSub').textContent=r==='bd'
     ?'Document a new opportunity as an Opportunity Assessment, run its viability check in the Business Model, and it enters the portfolio for review.'
     :'Approved projects hold their funds; open assessments wait below the line. Score with the team — scored OAs climb. The envelope tells you what you can afford.';
-  renderAll();
+  renderAll();attemptOpen();
 }
 function switchRole(){document.getElementById('roleGate').style.display='flex';}
 var STATUS_LBL={proposed:'OA — UNSCORED',scored:'OA — SCORED','go':'IN PROGRESS',parked:'PARKED',rejected:'REJECTED'};
@@ -846,9 +853,13 @@ async function load(){
     var r=await fetch('/api/opportunities',{headers:{Authorization:'Bearer '+token}});
     if(r.status===401){signOut();return;}
     OPPS=((await r.json()).opportunities||[]);
-    renderAll();
+    renderAll();attemptOpen();
   }catch(e){toast('Could not load portfolio — '+e.message);}
 }
+try{
+  var sr=sessionStorage.getItem('pf_role');
+  if(openParam&&sr){setRole(sr);}
+}catch(e){}
 load();loadFunds();
 </script>
 </body>
