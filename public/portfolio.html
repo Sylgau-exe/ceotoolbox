@@ -107,6 +107,10 @@
   <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;margin-top:4px">
     <div>
       <div id="listView"></div>
+      <div id="pfCashPanel" style="display:none;background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:22px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">PORTFOLIO CASH VIEW — 5 YEARS</div>
+        <div id="pfCashChart" style="margin-top:10px"></div>
+      </div>
       <div class="empty" id="empty">No assessments yet — document the first opportunity.</div>
 
     </div>
@@ -399,6 +403,7 @@ function renderAll(){
    +(inProg.length?inProg.map(function(o){return oppRow(o,false)}).join(''):'<div style="font-size:12.5px;color:#8A98A8;margin-top:8px">Nothing approved yet.</div>')
    +'<div class="sectdiv"></div>'
    +oaBlock;
+  renderPortfolioCash();
 }
 
 // ==================== ASSESSMENT FORM HELPERS ====================
@@ -489,9 +494,53 @@ function buildCashSVG(d){
   d.withOA.forEach(function(v,i){svg+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3" fill="#fff" stroke="#B58121" stroke-width="2"/>';});
   // direct end labels
   svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.base[4])+3)+'" font-size="10" font-weight="700" fill="#3A6EA8">Current · '+d.base[4].toFixed(1)+'M</text>';
-  svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.withOA[4])+3)+'" font-size="10" font-weight="700" fill="#B58121">+ Opportunity · '+d.withOA[4].toFixed(1)+'M</text>';
+  svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.withOA[4])+3)+'" font-size="10" font-weight="700" fill="#B58121">'+(d.count!=null?'+ open OAs':'+ Opportunity')+' · '+d.withOA[4].toFixed(1)+'M</text>';
   svg+='</svg>';
   return svg;
+}
+function oaCashFigures(o){
+  var v=o.viability&&o.viability.outputs?o.viability.outputs:null;
+  var a=o.assessment||{};
+  var inv,net;
+  if(v){inv=v.maxInvestmentUSD/1e6;net=(v.revenueUSD-v.opexCeilingUSD)/1e6;}
+  else{
+    inv=(a.estimate||[]).reduce(function(t,e){return t+(Number(e.cost)||0)},0)/1e6;
+    if(!inv&&o.est_investment)inv=Number(o.est_investment);
+    var cs=a.case||{};
+    net=(((cs.ticketing&&cs.ticketing.probable)||0)+((cs.sponsors&&cs.sponsors.probable)||0)+((cs.other&&cs.other.probable)||0)-((cs.cost&&cs.cost.probable)||0))/1e6;
+  }
+  var tl=o.est_timeline||'';var mM=tl.match(/\d+/);var months=mM?Number(mM[0]):12;if(/year/i.test(tl)&&mM)months=Number(mM[0])*12;
+  return{inv:inv||0,net:net||0,buildYears:Math.max(1,Math.ceil(months/12))};
+}
+function portfolioCashData(){
+  var y0=new Date().getFullYear();
+  var committed=committedTotal();
+  var fundsFor=function(y){var f=FUNDS.find(function(x){return x.year===y});if(f)return Number(f.funds);var last=FUNDS.filter(function(x){return x.year<y}).pop();return last?Number(last.funds):0;};
+  var oas=OPPS.filter(function(o){return o.status!=='go'&&o.status!=='parked'&&o.status!=='rejected'});
+  var base=[],withOA=[],cumF=0;
+  for(var i=0;i<5;i++){
+    cumF+=fundsFor(y0+i);
+    base.push(cumF-committed);
+    var delta=0;
+    oas.forEach(function(o){
+      var f=oaCashFigures(o);
+      var inv=Math.min(i+1,f.buildYears)/f.buildYears*f.inv;
+      var opYears=Math.max(0,i+1-f.buildYears);
+      delta+=-inv+f.net*opYears;
+    });
+    withOA.push(base[i]+delta);
+  }
+  return{y0:y0,base:base,withOA:withOA,count:oas.length,names:oas.map(function(o){return o.name})};
+}
+function renderPortfolioCash(){
+  var panel=document.getElementById('pfCashPanel');if(!panel)return;
+  if(ROLE!=='pm'){panel.style.display='none';return;}
+  try{
+    var d=portfolioCashData();
+    panel.style.display='block';
+    document.getElementById('pfCashChart').innerHTML=buildCashSVG({y0:d.y0,base:d.base,withOA:d.withOA,oaInv:0,annualNet:0,buildYears:1,src:''})
+     +'<div style="font-size:10.5px;color:#8A98A8;margin-top:6px;line-height:1.5">Cumulative portfolio cash (US$M): yearly funds − committed approved projects. <b style="color:#3A6EA8">━ current portfolio</b> · <b style="color:#B58121">╌ if the '+d.count+' open assessment'+(d.count===1?'':'s')+' were added</b>'+(d.count?' ('+d.names.join(' · ')+')':'')+'. Parked and rejected OAs excluded; each OA uses its viability check when attached, otherwise its estimate and probable case.</div>';
+  }catch(e){panel.style.display='none';}
 }
 function renderCashChart(){
   var el=document.getElementById('cashChart');if(!el)return;
