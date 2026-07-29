@@ -36,7 +36,7 @@
   .lrow.approved .lname{color:var(--green)}
   .sect{font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel);margin:22px 0 2px;display:flex;align-items:center;gap:8px}
   .sect .n{background:#EDF2F8;border-radius:99px;padding:2px 9px;color:var(--navy)}
-  @media(max-width:900px){#sidebar{position:static}main>div{grid-template-columns:1fr!important}}
+  @media(max-width:900px){#sidebar{position:static}main>div{grid-template-columns:1fr!important}#pfCashGrid{grid-template-columns:1fr!important}}
   .card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:19px;display:flex;flex-direction:column;gap:8px}
   .chead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
   .oname{font-size:15.5px;font-weight:800;color:var(--navy);line-height:1.3}
@@ -108,8 +108,17 @@
     <div>
       <div id="listView"></div>
       <div id="pfCashPanel" style="display:none;background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:22px">
-        <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">PORTFOLIO CASH VIEW — 5 YEARS</div>
-        <div id="pfCashChart" style="margin-top:10px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+          <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">CASH SCENARIO — 5 YEARS · toggle projects &amp; opportunities to see the burn</div>
+          <a style="font-size:11.5px;color:var(--steel);cursor:pointer;font-weight:700" onclick="scenReset()">reset to current</a>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 250px;gap:18px;align-items:start;margin-top:12px" id="pfCashGrid">
+          <div>
+            <div id="pfCashChart"></div>
+            <div id="pfCashStats" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"></div>
+          </div>
+          <div id="scenToggles" style="font-size:12.5px"></div>
+        </div>
       </div>
       <div class="empty" id="empty">No assessments yet — document the first opportunity.</div>
 
@@ -493,8 +502,8 @@ function buildCashSVG(d){
   d.base.forEach(function(v,i){svg+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3" fill="#3A6EA8"/>';});
   d.withOA.forEach(function(v,i){svg+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3" fill="#fff" stroke="#B58121" stroke-width="2"/>';});
   // direct end labels
-  svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.base[4])+3)+'" font-size="10" font-weight="700" fill="#3A6EA8">Current · '+d.base[4].toFixed(1)+'M</text>';
-  svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.withOA[4])+3)+'" font-size="10" font-weight="700" fill="#B58121">'+(d.count!=null?'+ open OAs':'+ Opportunity')+' · '+d.withOA[4].toFixed(1)+'M</text>';
+  svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.base[4])+3)+'" font-size="10" font-weight="700" fill="#3A6EA8">'+(d.count!=null?'Committed today':'Current')+' · '+d.base[4].toFixed(1)+'M</text>';
+  svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.withOA[4])+3)+'" font-size="10" font-weight="700" fill="#B58121">'+(d.count!=null?'Scenario':'+ Opportunity')+' · '+d.withOA[4].toFixed(1)+'M</text>';
   svg+='</svg>';
   return svg;
 }
@@ -512,34 +521,61 @@ function oaCashFigures(o){
   var tl=o.est_timeline||'';var mM=tl.match(/\d+/);var months=mM?Number(mM[0]):12;if(/year/i.test(tl)&&mM)months=Number(mM[0])*12;
   return{inv:inv||0,net:net||0,buildYears:Math.max(1,Math.ceil(months/12))};
 }
-function portfolioCashData(){
+var SCEN={};
+function scenReset(){SCEN={};OPPS.forEach(function(o){if(o.status==='go')SCEN[o.id]=true;});renderPortfolioCash();}
+function scenToggle(id){SCEN[id]=!SCEN[id];renderPortfolioCash();}
+function balanceSeries(ids){
   var y0=new Date().getFullYear();
-  var committed=committedTotal();
   var fundsFor=function(y){var f=FUNDS.find(function(x){return x.year===y});if(f)return Number(f.funds);var last=FUNDS.filter(function(x){return x.year<y}).pop();return last?Number(last.funds):0;};
-  var oas=OPPS.filter(function(o){return o.status!=='go'&&o.status!=='parked'&&o.status!=='rejected'});
-  var base=[],withOA=[],cumF=0;
+  var items=OPPS.filter(function(o){return ids[o.id]});
+  var out=[],cumF=0;
   for(var i=0;i<5;i++){
     cumF+=fundsFor(y0+i);
-    base.push(cumF-committed);
     var delta=0;
-    oas.forEach(function(o){
+    items.forEach(function(o){
       var f=oaCashFigures(o);
       var inv=Math.min(i+1,f.buildYears)/f.buildYears*f.inv;
       var opYears=Math.max(0,i+1-f.buildYears);
       delta+=-inv+f.net*opYears;
     });
-    withOA.push(base[i]+delta);
+    out.push(cumF+delta);
   }
-  return{y0:y0,base:base,withOA:withOA,count:oas.length,names:oas.map(function(o){return o.name})};
+  return{y0:y0,series:out};
 }
 function renderPortfolioCash(){
   var panel=document.getElementById('pfCashPanel');if(!panel)return;
   if(ROLE!=='pm'){panel.style.display='none';return;}
   try{
-    var d=portfolioCashData();
+    if(!Object.keys(SCEN).length)scenReset();
+    var current={};OPPS.forEach(function(o){if(o.status==='go')current[o.id]=true;});
+    var cur=balanceSeries(current);
+    var scen=balanceSeries(SCEN);
     panel.style.display='block';
-    document.getElementById('pfCashChart').innerHTML=buildCashSVG({y0:d.y0,base:d.base,withOA:d.withOA,oaInv:0,annualNet:0,buildYears:1,src:''})
-     +'<div style="font-size:10.5px;color:#8A98A8;margin-top:6px;line-height:1.5">Cumulative portfolio cash (US$M): yearly funds − committed approved projects. <b style="color:#3A6EA8">━ current portfolio</b> · <b style="color:#B58121">╌ if the '+d.count+' open assessment'+(d.count===1?'':'s')+' were added</b>'+(d.count?' ('+d.names.join(' · ')+')':'')+'. Parked and rejected OAs excluded; each OA uses its viability check when attached, otherwise its estimate and probable case.</div>';
+    document.getElementById('pfCashChart').innerHTML=buildCashSVG({y0:cur.y0,base:cur.series,withOA:scen.series,count:0});
+    // stats
+    var minV=Math.min.apply(null,scen.series),minI=scen.series.indexOf(minV);
+    var minCur=Math.min.apply(null,cur.series);
+    var burnCur=cur.series.map(function(v,i){return (i===0?0:cur.series[i-1])-v;});
+    function stat(lab,val,col){return '<div style="background:#F6F9FC;border:1px solid #DBE5EF;border-radius:9px;padding:8px 13px"><div style="font-size:9px;font-weight:800;letter-spacing:.7px;color:#8A98A8">'+lab+'</div><div style="font-size:16px;font-weight:800;color:'+(col||'var(--navy)')+'">'+val+'</div></div>';}
+    document.getElementById('pfCashStats').innerHTML=
+      stat('LOWEST BALANCE — CURRENT','US$'+minCur.toFixed(1)+'M',minCur<0?'var(--red)':'var(--navy)')
+     +stat('LOWEST BALANCE — SCENARIO','US$'+minV.toFixed(1)+'M in '+(scen.y0+minI),minV<0?'var(--red)':'var(--green)')
+     +stat('YEAR-5 BALANCE — SCENARIO','US$'+scen.series[4].toFixed(1)+'M',scen.series[4]<0?'var(--red)':'var(--navy)')
+     +stat('SCENARIO VS CURRENT (Y5)',(scen.series[4]-cur.series[4]>=0?'+':'')+ (scen.series[4]-cur.series[4]).toFixed(1)+'M',(scen.series[4]-cur.series[4])<0?'#8A5A00':'var(--green)');
+    // toggles
+    var appr=OPPS.filter(function(o){return o.status==='go'});
+    var oas=OPPS.filter(function(o){return o.status!=='go'&&o.status!=='rejected'});
+    function row(o){
+      var f=oaCashFigures(o);
+      return '<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #F0F3F7;cursor:pointer">'
+       +'<input type="checkbox" '+(SCEN[o.id]?'checked':'')+' onchange="scenToggle('+o.id+')" style="margin-top:2px;accent-color:#3A6EA8">'
+       +'<span style="flex:1"><b style="color:var(--navy);font-size:12px">'+o.name+'</b><br><span style="font-size:10.5px;color:#8A98A8">inv US$'+f.inv.toFixed(1)+'M · net US$'+f.net.toFixed(1)+'M/yr'+(o.status==='parked'?' · parked':'')+'</span></span></label>';
+    }
+    document.getElementById('scenToggles').innerHTML=
+      '<div style="font-size:9.5px;font-weight:800;letter-spacing:.8px;color:var(--green);margin-bottom:4px">APPROVED — UNCHECK TO SIMULATE REMOVAL</div>'
+     +(appr.map(row).join('')||'<div style="color:#8A98A8;font-size:11px">none</div>')
+     +'<div style="font-size:9.5px;font-weight:800;letter-spacing:.8px;color:var(--steel);margin:12px 0 4px">OPPORTUNITIES — CHECK TO SIMULATE ADDING</div>'
+     +(oas.map(row).join('')||'<div style="color:#8A98A8;font-size:11px">none</div>');
   }catch(e){panel.style.display='none';}
 }
 function renderCashChart(){
