@@ -587,7 +587,14 @@ function renderGantt(){
   var y0=new Date().getFullYear();
   var W=760,rowH=34,PL=210,PR=16,PT=26;
   var H=PT+items.length*rowH+26;
-  var X=function(m){return PL+(m/60)*(W-PL-PR);};   // 60 months axis
+  var X=function(m){return PL+(m/60)*(W-PL-PR);};   // 60-month axis
+  // phase model: pre-opening timeline split into 4 phases, then operation
+  var PHASES=[
+    {key:'Initiation',    share:0.10, fill:'#C9D6E5', ink:'#1E3A5F'},
+    {key:'Planning',      share:0.20, fill:'#9BB3CC', ink:'#16304F'},
+    {key:'Pre-production',share:0.30, fill:'#5B7A9D', ink:'#fff'},
+    {key:'Production',    share:0.40, fill:'#1E3A5F', ink:'#fff'}
+  ];
   var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%">';
   for(var yy=0;yy<=5;yy++){
     svg+='<line x1="'+X(yy*12)+'" x2="'+X(yy*12)+'" y1="'+(PT-8)+'" y2="'+(H-18)+'" stroke="#EDF2F6"/>';
@@ -596,24 +603,34 @@ function renderGantt(){
   items.forEach(function(o,i){
     var f=oaCashFigures(o);
     var tl=o.est_timeline||'';var mM=tl.match(/\d+/);var months=mM?Number(mM[0]):12;if(/year/i.test(tl)&&mM)months=Number(mM[0])*12;
-    months=Math.min(months,60);
+    months=Math.min(Math.max(months,4),60);
     var y=PT+i*rowH+6;
     var approved=o.status==='go';
     svg+='<text x="'+(PL-10)+'" y="'+(y+11)+'" text-anchor="end" font-size="10.5" font-weight="700" fill="'+(approved?'#2F7D52':'#1E3A5F')+'">'+(o.name.length>30?o.name.slice(0,28)+'…':o.name)+'</text>';
-    // build bar
-    svg+='<rect x="'+X(0)+'" y="'+y+'" width="'+Math.max(X(months)-X(0),6)+'" height="16" rx="4" fill="'+(approved?'#7FB394':'#5B7A9D')+'"/>';
-    svg+='<text x="'+(X(0)+5)+'" y="'+(y+12)+'" font-size="8.5" fill="#fff" font-weight="700">BUILD '+months+'mo</text>';
-    // operate bar
+    // phase segments (min 1 month each, remainder to Production)
+    var lens=PHASES.map(function(p){return Math.max(1,Math.round(months*p.share))});
+    var used=lens.reduce(function(a,b){return a+b},0);lens[3]+=months-used;
+    var cur=0;
+    PHASES.forEach(function(p,pi){
+      var w=X(cur+lens[pi])-X(cur);
+      svg+='<rect x="'+X(cur)+'" y="'+y+'" width="'+Math.max(w,3)+'" height="16" rx="3" fill="'+p.fill+'"><title>'+p.key+' · '+lens[pi]+'mo</title></rect>';
+      if(w>52)svg+='<text x="'+(X(cur)+4)+'" y="'+(y+12)+'" font-size="8" fill="'+p.ink+'" font-weight="700">'+p.key.toUpperCase().slice(0,7)+' '+lens[pi]+'mo</text>';
+      cur+=lens[pi];
+    });
+    // operation phase
     if(months<60){
-      svg+='<rect x="'+X(months)+'" y="'+y+'" width="'+(X(60)-X(months))+'" height="16" rx="4" fill="'+(approved?'#E7F2EB':'#EDF2F8')+'" stroke="'+(approved?'#C4DECF':'#DBE5EF')+'"/>';
-      svg+='<text x="'+(X(months)+6)+'" y="'+(y+12)+'" font-size="8.5" fill="'+(approved?'#2F7D52':'#5B7A9D')+'" font-weight="700">OPERATE'+(f.net?' · US$'+f.net.toFixed(1)+'M/yr':'')+'</text>';
-      // opening milestone
+      svg+='<rect x="'+X(months)+'" y="'+y+'" width="'+(X(60)-X(months))+'" height="16" rx="3" fill="'+(approved?'#E7F2EB':'#EDF2F8')+'" stroke="'+(approved?'#C4DECF':'#DBE5EF')+'"><title>Operation</title></rect>';
+      svg+='<text x="'+(X(months)+8)+'" y="'+(y+12)+'" font-size="8.5" fill="'+(approved?'#2F7D52':'#5B7A9D')+'" font-weight="700">OPERATION'+(f.net?' · US$'+f.net.toFixed(1)+'M/yr':'')+'</text>';
       svg+='<circle cx="'+X(months)+'" cy="'+(y+8)+'" r="5" fill="#D9A441" stroke="#fff" stroke-width="1.6"/>';
     }
   });
   svg+='</svg>';
+  var legend=PHASES.map(function(p){return '<span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+p.fill+';vertical-align:-1px;margin-right:5px;border:1px solid #DBE5EF"></span>'+p.key+'</span>';}).join('')
+   +'<span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#E7F2EB;border:1px solid #C4DECF;vertical-align:-1px;margin-right:5px"></span>Operation</span>'
+   +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D9A441;vertical-align:-1px;margin-right:5px"></span>Opening night</span>';
   document.getElementById('ganttChart').innerHTML=svg
-   +'<div style="font-size:11px;color:#8A98A8;margin-top:6px;line-height:1.5"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D9A441;vertical-align:-1px;margin-right:5px"></span>opening night · bars from each item\'s timeline; all starts shown from today. Month-level plans, dependencies and vendor gates come with the <b>Project Management</b> module (see roadmap).</div>';
+   +'<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:8px">'+legend+'</div>'
+   +'<div style="font-size:11px;color:#8A98A8;margin-top:6px;line-height:1.5">Phases split each item\'s pre-opening timeline (10 · 20 · 30 · 40%) — a planning default, refined per project in the <b>Project Management</b> module (see roadmap).</div>';
 }
 function renderPortfolioCash(){
   var panel=document.getElementById('pfCashPanel');if(!panel)return;
