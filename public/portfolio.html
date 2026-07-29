@@ -608,8 +608,8 @@ function renderGantt(){
     if(o.status!=='go'){ // opportunities are, by definition, in Initiation
       return{phase:0,months:months,elapsed:0,pct:0,cashSpent:0,cashPct:0,inv:f.inv,net:f.net,fict:false};
     }
-    // fictive elapsed for approved projects (deterministic, until PM module tracks actuals)
-    var share=(((o.id*7)%8)+1)/10; // 0.1 .. 0.8 through pre-opening
+    // elapsed share: stored progress when provided (assessment.progress, 0..1+), else deterministic fictive
+    var share=(o.assessment&&o.assessment.progress!=null)?Number(o.assessment.progress):((((o.id*7)%8)+1)/10);
     var elapsed=Math.round(months*share);
     var pct=Math.round(share*100);
     // phase from boundaries
