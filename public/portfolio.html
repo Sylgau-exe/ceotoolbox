@@ -108,10 +108,7 @@
     <div>
       <div id="listView"></div>
       <div class="empty" id="empty">No assessments yet — document the first opportunity.</div>
-      <div class="weights" id="weightsBox">
-        <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-bottom:4px">SCORING WEIGHTS — one set of rules for every opportunity (portfolio review)</div>
-        <div id="weightRows"></div>
-      </div>
+
     </div>
     <div id="sidebar" style="position:sticky;top:80px">
       <div style="background:var(--navy);border-radius:13px;padding:18px;color:#fff">
@@ -122,6 +119,11 @@
         <div style="font-size:10px;font-weight:800;letter-spacing:1.1px;color:var(--steel);margin-bottom:8px">FUNDS BY YEAR (US$M)</div>
         <div id="fundsRows"></div>
         <a style="font-size:11.5px;color:var(--steel);cursor:pointer;font-weight:700" onclick="addFundYear()">＋ add year</a>
+      </div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:13px;padding:16px;margin-top:12px" id="rulesCard">
+        <div style="font-size:10px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">SCORING RULES</div>
+        <div id="rulesSummary" style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.6"></div>
+        <a style="display:inline-block;margin-top:8px;font-size:12.5px;color:var(--steel);cursor:pointer;font-weight:700" onclick="openWeights()">Edit categories, weights &amp; guidance →</a>
       </div>
     </div>
   </div>
@@ -200,6 +202,21 @@
     </div>
   </div>
 </div>
+<div class="modal" id="weightsModal">
+  <div class="mbox" style="max-width:640px">
+    <h3>Scoring rules — categories, weights &amp; guidance</h3>
+    <div style="font-size:11.5px;color:var(--muted)">One set of rules for every opportunity. Weights auto-normalize; the guidance appears next to each slider during the portfolio review.</div>
+    <div id="weightRows" style="margin-top:12px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+      <a style="font-size:12.5px;color:var(--steel);cursor:pointer;font-weight:700" onclick="addCriterion()">＋ add category</a>
+      <span id="wTotal" style="font-size:12px;font-weight:800;color:var(--navy)"></span>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn ghost" onclick="document.getElementById('weightsModal').style.display='none'">Close</button>
+      <button class="btn" onclick="saveWeights()">Save rules</button>
+    </div>
+  </div>
+</div>
 <div id="assessPrint" style="display:none"></div>
 <div id="roleGate" style="position:fixed;inset:0;background:linear-gradient(160deg,#16304F,#1E3A5F 60%,#2A4A73);z-index:70;display:flex;align-items:center;justify-content:center;padding:24px">
   <div style="max-width:720px;width:100%;text-align:center">
@@ -233,13 +250,14 @@ function signOut(){localStorage.removeItem('auth_token');localStorage.removeItem
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none'},2600);}
 
 var CRITERIA=[
-  {key:'strategic', label:'Strategic fit (Sun Group synergy)', w:25},
-  {key:'market',    label:'Market attractiveness (per Market Intelligence)', w:20},
-  {key:'financial', label:'Financial return', w:25},
-  {key:'capability',label:'Capability to execute', w:15},
-  {key:'risk',      label:'Risk profile (5 = low risk)', w:15}
+  {key:'strategic', label:'Strategic fit (Sun Group synergy)', w:25, guide:'0 = no link to Sun Group assets or strategy · 3 = supports one pillar (traffic, brand, hotel/F&B nights) · 5 = multiplies existing assets and the entertainment pillar'},
+  {key:'market',    label:'Market attractiveness (per Market Intelligence)', w:20, guide:'Use the dashboard: 0 = no demand evidence or shrinking market · 3 = growing market but crowded competitive space · 5 = large growing demand with a clear whitespace'},
+  {key:'financial', label:'Financial return', w:25, guide:'From the viability check & case: 0 = negative at most-probable case · 3 = meets board margin at most-probable · 5 = strong return with headroom even in the worst case'},
+  {key:'capability',label:'Capability to execute', w:15, guide:'0 = new skills and partners needed everywhere · 3 = mix of existing and new capabilities · 5 = we have done this before with teams we trust'},
+  {key:'risk',      label:'Risk profile (5 = low risk)', w:15, guide:'5 = proven concept, secured rights, diversified audience · 3 = known risks with credible strategies · 0 = major unmitigated risks (rights unclear, single source market, unproven ramp-up)'}
 ];
-try{var savedW=JSON.parse(localStorage.getItem('pf_weights')||'null');if(savedW)CRITERIA.forEach(function(c){if(savedW[c.key]!=null)c.w=savedW[c.key];});}catch(e){}
+try{var savedC=JSON.parse(localStorage.getItem('pf_criteria')||'null');if(savedC&&savedC.length)CRITERIA=savedC;}catch(e){}
+function slug(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,30)||('c'+CRITERIA.length);}
 var OPPS=[],FUNDS=[],view='cards',editing=null;
 var ROLE=null; // 'bd' | 'pm'
 function setRole(r){
@@ -248,7 +266,6 @@ function setRole(r){
   document.getElementById('roleLink').textContent=r==='bd'?'Role: BD leader (switch)':'Role: Portfolio leader (switch)';
   // BD: no ranking tab, no sidebar, no weights
   document.getElementById('sidebar').style.display=r==='pm'?'block':'none';
-  document.getElementById('weightsBox').style.display=r==='pm'?'block':'none';
   document.getElementById('newBtn').style.display=r==='bd'?'inline-block':'none';
   document.getElementById('pageSub').textContent=r==='bd'
     ?'Document a new opportunity as an Opportunity Assessment, run its viability check in the Business Model, and it enters the portfolio for review.'
@@ -265,19 +282,52 @@ function scoreOf(o){
   return any?(tot/wsum())/5*100:null;   // 0-100
 }
 function renderWeights(){
+  var rs=document.getElementById('rulesSummary');
+  if(rs)rs.innerHTML=CRITERIA.map(function(c){return '<div style="display:flex;justify-content:space-between"><span>'+c.label.split('(')[0].trim()+'</span><b>'+c.w+'%</b></div>';}).join('');
+}
+function openWeights(){renderWeightRows();document.getElementById('weightsModal').style.display='flex';}
+function renderWeightRows(){
   document.getElementById('weightRows').innerHTML=CRITERIA.map(function(c,i){
-    return '<div class="crit"><label>'+c.label+'</label><input type="number" min="0" max="100" value="'+c.w+'" onchange="CRITERIA['+i+'].w=Number(this.value)||0;persistW();renderAll()">%</div>';
-  }).join('')+'<div style="font-size:10.5px;color:'+(wsum()===100?'#8A98A8':'#B3403A')+'">Total: '+wsum()+'%'+(wsum()===100?'':' — weights auto-normalize')+'</div>';
+    return '<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px" class="critedit" data-i="'+i+'">'
+     +'<div style="display:flex;gap:8px;align-items:center">'
+     +'<input value="'+c.label.replace(/"/g,'&quot;')+'" data-f="label" style="flex:1;font-weight:700">'
+     +'<input type="number" min="0" max="100" value="'+c.w+'" data-f="w" style="width:64px;text-align:right" oninput="wTotalUpd()">%'
+     +'<a style="color:#B3403A;font-weight:800;cursor:pointer;padding:0 4px" onclick="this.closest(\'.critedit\').remove();wTotalUpd()">×</a></div>'
+     +'<textarea data-f="guide" rows="2" placeholder="Scoring guidance: what does 0 · 3 · 5 look like?" style="width:100%;margin-top:7px;font-size:12px;color:var(--muted)">'+(c.guide||'')+'</textarea>'
+     +'</div>';
+  }).join('');
+  wTotalUpd();
 }
-function persistW(){var o={};CRITERIA.forEach(function(c){o[c.key]=c.w});localStorage.setItem('pf_weights',JSON.stringify(o));}
+function wTotalUpd(){
+  var t=0;document.querySelectorAll('#weightRows [data-f=w]').forEach(function(i){t+=Number(i.value)||0});
+  document.getElementById('wTotal').innerHTML='Total: <span style="color:'+(t===100?'var(--green)':'#B3403A')+'">'+t+'%</span>'+(t===100?'':' — auto-normalizes');
+}
+function addCriterion(){
+  document.getElementById('weightRows').insertAdjacentHTML('beforeend',
+   '<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px" class="critedit" data-i="new">'
+   +'<div style="display:flex;gap:8px;align-items:center"><input placeholder="New category name" data-f="label" style="flex:1;font-weight:700">'
+   +'<input type="number" min="0" max="100" value="10" data-f="w" style="width:64px;text-align:right" oninput="wTotalUpd()">%'
+   +'<a style="color:#B3403A;font-weight:800;cursor:pointer;padding:0 4px" onclick="this.closest(\'.critedit\').remove();wTotalUpd()">×</a></div>'
+   +'<textarea data-f="guide" rows="2" placeholder="Scoring guidance: what does 0 · 3 · 5 look like?" style="width:100%;margin-top:7px;font-size:12px;color:var(--muted)"></textarea></div>');
+  wTotalUpd();
+}
+function saveWeights(){
+  var next=[];
+  document.querySelectorAll('#weightRows .critedit').forEach(function(row){
+    var label=row.querySelector('[data-f=label]').value.trim();
+    if(!label)return;
+    var i=row.dataset.i;
+    var key=(i!=='new'&&CRITERIA[Number(i)])?CRITERIA[Number(i)].key:slug(label);
+    next.push({key:key,label:label,w:Number(row.querySelector('[data-f=w]').value)||0,guide:row.querySelector('[data-f=guide]').value.trim()});
+  });
+  if(!next.length){toast('Keep at least one category.');return;}
+  CRITERIA=next;
+  localStorage.setItem('pf_criteria',JSON.stringify(CRITERIA));
+  document.getElementById('weightsModal').style.display='none';
+  renderAll();toast('Scoring rules saved.');
+}
 
-function setView(v){view=v;
-  document.getElementById('tabCards').className='tab'+(v==='cards'?' on':'');
-  document.getElementById('tabRank').className='tab'+(v==='rank'?' on':'');
-  document.getElementById('cardsView').style.display=v==='cards'?'grid':'none';
-  document.getElementById('rankView').style.display=v==='rank'?'block':'none';
-  renderAll();
-}
+
 function bar(pct){return '<div class="scoreline"><div class="scorebar" style="flex:1"><div style="width:'+(pct||0)+'%"></div></div><b>'+(pct!=null?Math.round(pct):'—')+'</b></div>';}
 
 function committedTotal(){return OPPS.filter(function(o){return o.status==='go'}).reduce(function(t,o){return t+(Number(o.est_investment)||0)},0);}
@@ -348,6 +398,154 @@ function renderAll(){
    +oaBlock;
 }
 
+// ==================== ASSESSMENT FORM HELPERS ====================
+function riskRow(r){r=r||{};return '<div style="display:grid;grid-template-columns:1.2fr .6fr 1.6fr 24px;gap:6px;margin:5px 0" class="riskrow">'
+ +'<input placeholder="Risk (e.g. Creative)" value="'+(r.risk||'')+'" data-f="risk">'
+ +'<select data-f="level"><option'+(r.level==='low'?' selected':'')+'>low</option><option'+(r.level==='medium'?' selected':'')+'>medium</option><option'+(r.level==='high'?' selected':'')+'>high</option></select>'
+ +'<input placeholder="Strategy (e.g. proven creative team)" value="'+(r.strategy||'')+'" data-f="strategy">'
+ +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove()">×</a></div>';}
+function addRisk(r){document.getElementById('riskRows').insertAdjacentHTML('beforeend',riskRow(r));}
+function estRow(e){e=e||{};return '<div style="display:grid;grid-template-columns:1.6fr .6fr 1.6fr 24px;gap:6px;margin:5px 0" class="estrow">'
+ +'<input placeholder="Topic (e.g. Production)" value="'+(e.topic||'')+'" data-f="topic">'
+ +'<input type="number" step="1000" placeholder="$" value="'+(e.cost!=null?e.cost:'')+'" data-f="cost" onchange="estTotal()">'
+ +'<input placeholder="Remark (front/back end, contingency…)" value="'+(e.remark||'')+'" data-f="remark">'
+ +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove();estTotal()">×</a></div>';}
+function addEst(e){document.getElementById('estRows').insertAdjacentHTML('beforeend',estRow(e));estTotal();}
+function estTotal(){var t=0;document.querySelectorAll('#estRows [data-f=cost]').forEach(function(i){t+=Number(i.value)||0});
+ document.getElementById('estTotal').textContent=t?('Planned total: '+t.toLocaleString('en-US')):'';}
+function schedRow(x){x=x||{};return '<div style="display:grid;grid-template-columns:1.6fr .8fr 1.6fr 24px;gap:6px;margin:5px 0" class="schedrow">'
+ +'<input placeholder="Activity (e.g. Secure rights)" value="'+(x.activity||'')+'" data-f="activity">'
+ +'<input placeholder="Target" value="'+(x.target||'')+'" data-f="target">'
+ +'<input placeholder="Remark" value="'+(x.remark||'')+'" data-f="remark">'
+ +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove()">×</a></div>';}
+function addSched(x){document.getElementById('schedRows').insertAdjacentHTML('beforeend',schedRow(x));}
+var CASE_ROWS=[['ticketing','Revenue — ticketing'],['sponsors','Revenue — sponsors'],['other','Revenue — other'],['cost','Total cost']];
+function renderCase(cs){cs=cs||{};
+ var t=document.getElementById('caseTable');
+ t.innerHTML='<tr><th></th><th>BEST</th><th>MOST PROBABLE</th><th>WORST</th><th>ASSUMPTIONS</th></tr>'
+  +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};
+   return '<tr data-row="'+rw[0]+'"><td style="font-weight:700;font-size:12px">'+rw[1]+'</td>'
+    +['best','probable','worst'].map(function(k){return '<td><input type="number" style="width:92px;padding:5px" value="'+(v[k]!=null?v[k]:'')+'" data-k="'+k+'" onchange="caseProfit()"></td>';}).join('')
+    +'<td><input style="width:100%;min-width:120px;padding:5px" value="'+(v.assumptions||'')+'" data-k="assumptions"></td></tr>';}).join('')
+  +'<tr id="profitRow"><td style="font-weight:800;color:var(--navy)">Profit</td><td></td><td></td><td></td><td style="font-size:11px;color:var(--muted)">computed</td></tr>';
+ caseProfit();
+}
+function caseGet(){var cs={};document.querySelectorAll('#caseTable tr[data-row]').forEach(function(tr){
+  var o={};tr.querySelectorAll('input').forEach(function(i){o[i.dataset.k]=i.dataset.k==='assumptions'?i.value:(i.value===''?null:Number(i.value));});
+  cs[tr.dataset.row]=o;});return cs;}
+function caseProfit(){var cs=caseGet();var cells=document.querySelectorAll('#profitRow td');
+ ['best','probable','worst'].forEach(function(k,i){
+  var rev=(cs.ticketing&&cs.ticketing[k]||0)+(cs.sponsors&&cs.sponsors[k]||0)+(cs.other&&cs.other[k]||0);
+  var cost=cs.cost&&cs.cost[k]||0;var p=rev-cost;
+  cells[i+1].innerHTML='<b style="color:'+(p>=0?'var(--green)':'var(--red)')+'">'+(rev||cost?p.toLocaleString('en-US'):'—')+'</b>';});}
+function rowsGet(sel){var out=[];document.querySelectorAll(sel).forEach(function(row){
+  var o={};row.querySelectorAll('[data-f]').forEach(function(i){o[i.dataset.f]=i.value;});
+  if(Object.values(o).some(function(v){return v&&String(v).trim()}))out.push(o);});return out;}
+// ==================== END HELPERS ====================
+function critInputs(scores){
+  return CRITERIA.map(function(c){
+    var v=scores&&scores[c.key]!=null?scores[c.key]:'';
+    return '<div style="margin:10px 0 12px"><div class="crit" style="margin:0"><label>'+c.label+' <span style="color:#9AA8B8;font-weight:600">('+c.w+'%)</span></label><input type="range" min="0" max="5" step="1" value="'+(v===''?0:v)+'" oninput="this.nextElementSibling.textContent=this.value" data-k="'+c.key+'"><b>'+(v===''?0:v)+'</b></div>'
+     +(c.guide?'<div style="font-size:11px;color:#8A98A8;line-height:1.5;margin-top:2px;padding-left:2px">'+c.guide+'</div>':'')+'</div>';
+  }).join('');
+}
+function openNew(){editing=null;document.getElementById('mtitle').textContent='New Opportunity Assessment';document.getElementById('saveBtn').textContent='Create';
+  document.getElementById('printAssessBtn').style.display='none';
+  document.getElementById('viabBtn').style.display='none';
+  ['f_name','f_ip','f_sponsor','f_partner','f_intro','f_benefits','f_scope','f_constraints','f_success','f_finfront','f_finback','f_fincredits','f_time'].forEach(function(i){document.getElementById(i).value=''});
+  document.getElementById('riskRows').innerHTML='';['Creative','Production','Profitability'].forEach(function(r){addRisk({risk:r,level:'low'})});
+  document.getElementById('estRows').innerHTML='';addEst();addEst();
+  document.getElementById('schedRows').innerHTML='';addSched();addSched();
+  renderCase(null);
+  document.getElementById('modal').style.display='flex';}
+function openEdit(id){
+  var o=OPPS.find(function(x){return x.id===id});if(!o)return;
+  editing=o;var a=o.assessment||{};
+  document.getElementById('mtitle').textContent='Opportunity Assessment — '+o.name;document.getElementById('saveBtn').textContent='Save';
+  document.getElementById('printAssessBtn').style.display='inline-block';
+  document.getElementById('viabBtn').style.display='inline-block';
+  document.getElementById('f_name').value=o.name;document.getElementById('f_city').value=o.city;
+  document.getElementById('f_type').value=o.otype||'new-show';document.getElementById('f_sponsor').value=o.sponsor||'';
+  document.getElementById('f_ip').value=a.ip_owner||'';document.getElementById('f_partner').value=a.partner_contact||'';
+  document.getElementById('f_intro').value=a.intro||o.objective||'';document.getElementById('f_benefits').value=a.benefits||'';
+  document.getElementById('f_scope').value=a.scope||'';document.getElementById('f_constraints').value=a.constraints||'';
+  document.getElementById('f_success').value=a.success||o.strategic_link||'';
+  document.getElementById('f_finfront').value=a.fin_front||'';document.getElementById('f_finback').value=a.fin_back||'';
+  document.getElementById('f_fincredits').value=a.fin_credits||'';document.getElementById('f_time').value=o.est_timeline||'';
+  document.getElementById('riskRows').innerHTML='';(a.risks&&a.risks.length?a.risks:[{risk:'Creative',level:'low'},{risk:'Production',level:'low'},{risk:'Profitability',level:'low'}]).forEach(addRisk);
+  document.getElementById('estRows').innerHTML='';(a.estimate&&a.estimate.length?a.estimate:[{},{}]).forEach(function(e){addEst(e)});
+  document.getElementById('schedRows').innerHTML='';(a.schedule&&a.schedule.length?a.schedule:[{},{}]).forEach(addSched);
+  renderCase(a.case);
+  document.getElementById('modal').style.display='flex';}
+function closeModal(){document.getElementById('modal').style.display='none';}
+
+function viabFromModal(){if(editing)runViability(editing.id);}
+async function saveOpp(goViability){
+  var estRows=rowsGet('#estRows .estrow');
+  var estSum=estRows.reduce(function(t,e){return t+(Number(e.cost)||0)},0);
+  var assessment={ip_owner:document.getElementById('f_ip').value.trim(),partner_contact:document.getElementById('f_partner').value.trim(),
+    phase:'Initiation',intro:document.getElementById('f_intro').value.trim(),benefits:document.getElementById('f_benefits').value.trim(),
+    scope:document.getElementById('f_scope').value.trim(),constraints:document.getElementById('f_constraints').value.trim(),
+    success:document.getElementById('f_success').value.trim(),risks:rowsGet('#riskRows .riskrow'),
+    estimate:estRows,fin_front:document.getElementById('f_finfront').value.trim(),fin_back:document.getElementById('f_finback').value.trim(),
+    fin_credits:document.getElementById('f_fincredits').value.trim(),schedule:rowsGet('#schedRows .schedrow'),case:caseGet()};
+  var body={name:document.getElementById('f_name').value.trim(),city:document.getElementById('f_city').value,
+    otype:document.getElementById('f_type').value,sponsor:document.getElementById('f_sponsor').value.trim(),
+    est_investment:estSum?estSum/1e6:null,
+    est_timeline:document.getElementById('f_time').value.trim(),objective:document.getElementById('f_intro').value.trim().slice(0,300),
+    strategic_link:document.getElementById('f_success').value.trim().slice(0,200),assessment:assessment};
+  if(!body.name){toast('Name required.');return;}
+  try{
+    var method='POST';if(editing){body.id=editing.id;method='PATCH';}
+    var r=await fetch('/api/opportunities',{method:method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)});
+    var data=await r.json();
+    if(!r.ok)throw new Error(data.error||r.status);
+    var oid=editing?editing.id:(data.opportunity&&data.opportunity.id);
+    closeModal();
+    if(goViability&&oid){
+      var c=body.city==='Vietnam'?'Ho Chi Minh City':body.city;
+      location.href='model.html?city='+encodeURIComponent(c)+'&opp='+oid+'&oname='+encodeURIComponent(body.name);
+      return;
+    }
+    load();toast('Assessment saved.');
+  }catch(e){toast('Save failed: '+e.message);}
+}
+function printAssessment(){
+  if(!editing)return;var o=editing;var a=o.assessment||{};
+  // collect live values so unsaved edits print too
+  var cs=caseGet();var risks=rowsGet('#riskRows .riskrow');var est=rowsGet('#estRows .estrow');var sched=rowsGet('#schedRows .schedrow');
+  function g(id){return document.getElementById(id).value.trim();}
+  var prof={};['best','probable','worst'].forEach(function(k){
+    prof[k]=((cs.ticketing&&cs.ticketing[k])||0)+((cs.sponsors&&cs.sponsors[k])||0)+((cs.other&&cs.other[k])||0)-((cs.cost&&cs.cost[k])||0);});
+  var estSum=est.reduce(function(t,e){return t+(Number(e.cost)||0)},0);
+  document.getElementById('assessPrint').innerHTML=
+   '<div style="display:flex;justify-content:space-between;border-bottom:2.5px solid #1E3A5F;padding-bottom:8px"><div>'
+   +'<h1>Opportunity Assessment — '+g('f_name')+'</h1>'
+   +'<p style="color:#64748B">Phase: Initiation · Category: '+document.getElementById('f_type').value+' · '+document.getElementById('f_city').value+' · '+new Date().toISOString().slice(0,10)+'</p></div>'
+   +'<div style="font-size:9px;font-weight:800;letter-spacing:1.3px;color:#8A5A00">CONFIDENTIAL</div></div>'
+   +'<table><tr><th>IP owner</th><td>'+(g('f_ip')||'—')+'</td><th>Opportunity owner</th><td>'+(g('f_sponsor')||'—')+'</td><th>Partner contact</th><td>'+(g('f_partner')||'—')+'</td></tr></table>'
+   +'<h4>1.0 INTRODUCTION — TRIGGER / PROBLEMATIC</h4><p>'+(g('f_intro')||'—')+'</p>'
+   +'<h4>2.0 POTENTIAL BENEFITS</h4><p>'+(g('f_benefits')||'—')+'</p>'
+   +'<h4>3.0 SCOPE — SCALE · DELIVERABLES · INTERRELATIONSHIPS · EXCLUSIONS</h4><p>'+(g('f_scope')||'—')+'</p>'
+   +'<h4>4.0 CONSTRAINTS</h4><p>'+(g('f_constraints')||'—')+'</p>'
+   +'<h4>5.0 CRITERIA FOR SUCCESS</h4><p>'+(g('f_success')||'—')+'</p>'
+   +'<h4>6.0 HIGH-LEVEL PLAN — RISKS & STRATEGY</h4>'
+   +'<table><tr><th>Risk</th><th>Level</th><th>Strategy</th></tr>'+risks.map(function(r){return '<tr><td>'+r.risk+'</td><td>'+r.level+'</td><td>'+r.strategy+'</td></tr>';}).join('')+'</table>'
+   +'<h4>PROJECT ESTIMATE — ORDER OF MAGNITUDE</h4>'
+   +'<table><tr><th>Topic</th><th>Cost</th><th>Remark</th></tr>'+est.map(function(e){return '<tr><td>'+e.topic+'</td><td>'+(Number(e.cost)||0).toLocaleString('en-US')+'</td><td>'+e.remark+'</td></tr>';}).join('')
+   +'<tr><th>Planned total</th><th>'+estSum.toLocaleString('en-US')+'</th><td></td></tr></table>'
+   +'<p style="margin-top:5px"><b>Financing</b> — Front end: '+(g('f_finfront')||'—')+' · Back end: '+(g('f_finback')||'—')+' · Credits: '+(g('f_fincredits')||'—')+'</p>'
+   +'<h4>DRAFT SCHEDULE (GUIDE)</h4>'
+   +'<table><tr><th>Activity</th><th>Target</th><th>Remark</th></tr>'+sched.map(function(x){return '<tr><td>'+x.activity+'</td><td>'+x.target+'</td><td>'+x.remark+'</td></tr>';}).join('')+'</table>'
+   +(o.viability&&o.viability.outputs?('<h4>VIABILITY CHECK — BUSINESS MODEL ('+(o.viability.city||'')+', '+(o.viability.date||'')+')</h4>'
+   +'<p>Revenue US$'+(o.viability.outputs.revenueUSD/1e6).toFixed(1)+'M/yr · Opex ceiling US$'+(o.viability.outputs.opexCeilingUSD/1e6).toFixed(1)+'M/yr · <b>Max production investment US$'+(o.viability.outputs.maxInvestmentUSD/1e6).toFixed(1)+'M</b> · '+o.viability.inputs.seats.toLocaleString('en-US')+' seats · '+o.viability.inputs.shows+' shows/yr · '+(o.viability.inputs.occupancy*100).toFixed(0)+'% occupancy</p>'):'')
+   +'<h4>8.0 CASE</h4>'
+   +'<table><tr><th></th><th>Best</th><th>Most probable</th><th>Worst</th><th>Assumptions</th></tr>'
+   +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};return '<tr><td>'+rw[1]+'</td><td>'+(v.best!=null?v.best.toLocaleString('en-US'):'—')+'</td><td>'+(v.probable!=null?v.probable.toLocaleString('en-US'):'—')+'</td><td>'+(v.worst!=null?v.worst.toLocaleString('en-US'):'—')+'</td><td>'+(v.assumptions||'')+'</td></tr>';}).join('')
+   +'<tr><th>Profit</th><th>'+prof.best.toLocaleString('en-US')+'</th><th>'+prof.probable.toLocaleString('en-US')+'</th><th>'+prof.worst.toLocaleString('en-US')+'</th><td></td></tr></table>'
+   +'<p style="margin-top:12px;font-size:9.5px;color:#8A98A8">Sun Group Entertainment (GSM) · CEO Toolbox — Decision Portfolio · Opportunity Assessment (Initiation) · Panda Projet Inc.</p>';
+  window.print();
+}
 function runViability(id){
   var o=OPPS.find(function(x){return x.id===id});if(!o)return;
   var c=o.city==='Vietnam'?'Ho Chi Minh City':o.city;
