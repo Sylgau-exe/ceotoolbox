@@ -109,8 +109,12 @@
       <div id="listView"></div>
       <div id="pfCashPanel" style="display:none;background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:22px">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
-          <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">CASH SCENARIO — 5 YEARS · toggle projects &amp; opportunities to see the burn</div>
-          <a style="font-size:11.5px;color:var(--steel);cursor:pointer;font-weight:700" onclick="scenReset()">reset to current</a>
+          <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">CASH SCENARIO — 5 YEARS · how the portfolio burns the cash balance</div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <label style="font-size:11.5px;color:var(--muted);font-weight:700">Starting cash US$M
+              <input type="number" id="startCash" step="0.5" style="width:74px;margin-left:6px;padding:6px 8px;border:1.5px solid var(--line);border-radius:7px;font-size:12.5px;text-align:right" onchange="setStartCash(this.value)"></label>
+            <a style="font-size:11.5px;color:var(--steel);cursor:pointer;font-weight:700" onclick="scenReset()">reset to current</a>
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 250px;gap:18px;align-items:start;margin-top:12px" id="pfCashGrid">
           <div>
@@ -522,54 +526,87 @@ function oaCashFigures(o){
   return{inv:inv||0,net:net||0,buildYears:Math.max(1,Math.ceil(months/12))};
 }
 var SCEN={};
+var START_CASH=null;
+try{var sc=localStorage.getItem('pf_startcash');if(sc!=null&&sc!=='')START_CASH=Number(sc);}catch(e){}
+function defaultStartCash(){
+  var y=new Date().getFullYear();var f=FUNDS.find(function(x){return x.year===y});
+  return f?Number(f.funds):(FUNDS[0]?Number(FUNDS[0].funds):10);
+}
+function setStartCash(v){START_CASH=Number(v)||0;localStorage.setItem('pf_startcash',String(START_CASH));renderPortfolioCash();}
 function scenReset(){SCEN={};OPPS.forEach(function(o){if(o.status==='go')SCEN[o.id]=true;});renderPortfolioCash();}
 function scenToggle(id){SCEN[id]=!SCEN[id];renderPortfolioCash();}
-function balanceSeries(ids){
-  var y0=new Date().getFullYear();
-  var fundsFor=function(y){var f=FUNDS.find(function(x){return x.year===y});if(f)return Number(f.funds);var last=FUNDS.filter(function(x){return x.year<y}).pop();return last?Number(last.funds):0;};
+function burnSeries(ids,start){
+  // balance: start cash − cumulative build spend + cumulative operating net. NO automatic yearly top-ups.
   var items=OPPS.filter(function(o){return ids[o.id]});
-  var out=[],cumF=0;
+  var out=[start];
   for(var i=0;i<5;i++){
-    cumF+=fundsFor(y0+i);
-    var delta=0;
+    var bal=start;
     items.forEach(function(o){
       var f=oaCashFigures(o);
       var inv=Math.min(i+1,f.buildYears)/f.buildYears*f.inv;
       var opYears=Math.max(0,i+1-f.buildYears);
-      delta+=-inv+f.net*opYears;
+      bal+=-inv+f.net*opYears;
     });
-    out.push(cumF+delta);
+    out.push(bal);
   }
-  return{y0:y0,series:out};
+  return out; // 6 points: start + 5 year-ends
+}
+function pfCashSVG(y0,cur,scen){
+  var W=640,H=230,PL=54,PR=20,PT=14,PB=30;
+  var all=cur.concat(scen).concat([0]);
+  var min=Math.min.apply(null,all),max=Math.max.apply(null,all);
+  var span=(max-min)||1;min-=span*.12;max+=span*.12;
+  var N=cur.length;
+  var X=function(i){return PL+i*(W-PL-PR)/(N-1);};
+  var Y=function(v){return PT+(max-v)/(max-min)*(H-PT-PB);};
+  function path(a){return a.map(function(v,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);}).join(' ');}
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#F7F9FB;border:1px solid var(--line);border-radius:10px">';
+  if(min<0&&max>0)svg+='<rect x="'+PL+'" y="'+Y(0)+'" width="'+(W-PL-PR)+'" height="'+(H-PB-Y(0))+'" fill="#FBEAE9" opacity=".55"/><line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="#B3403A" stroke-width="1.2" stroke-dasharray="3 3"/><text x="'+(W-PR-4)+'" y="'+(Y(0)-5)+'" text-anchor="end" font-size="8.5" fill="#B3403A" font-weight="700">CASH OUT — BELOW ZERO</text>';
+  [max-span*.12,min+span*.12].forEach(function(v){svg+='<text x="'+(PL-7)+'" y="'+(Y(v)+3)+'" text-anchor="end" font-size="9" fill="#8A98A8">'+v.toFixed(0)+'M</text><line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#E2E8F0"/>';});
+  svg+='<text x="'+(PL-7)+'" y="'+(Y(0)+3)+'" text-anchor="end" font-size="9" fill="'+(min<0?'#B3403A':'#8A98A8')+'">0</text>';
+  var labels=['Now'];for(var i=0;i<5;i++)labels.push(String(y0+i));
+  labels.forEach(function(l,i){svg+='<text x="'+X(i)+'" y="'+(H-10)+'" text-anchor="middle" font-size="9.5" fill="#64748B">'+l+'</text>';});
+  // committed today: thin grey reference
+  svg+='<path d="'+path(cur)+'" fill="none" stroke="#9AA8B8" stroke-width="1.8" stroke-dasharray="2 4" stroke-linecap="round"/>';
+  // scenario: bold amber
+  svg+='<path d="'+path(scen)+'" fill="none" stroke="#B58121" stroke-width="3" stroke-linecap="round"/>';
+  scen.forEach(function(v,i){svg+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3.4" fill="#B58121"/>';});
+  svg+='</svg>';
+  return svg;
 }
 function renderPortfolioCash(){
   var panel=document.getElementById('pfCashPanel');if(!panel)return;
   if(ROLE!=='pm'){panel.style.display='none';return;}
   try{
     if(!Object.keys(SCEN).length)scenReset();
+    if(START_CASH==null)START_CASH=defaultStartCash();
+    document.getElementById('startCash').value=START_CASH;
+    var y0=new Date().getFullYear();
     var current={};OPPS.forEach(function(o){if(o.status==='go')current[o.id]=true;});
-    var cur=balanceSeries(current);
-    var scen=balanceSeries(SCEN);
+    var cur=burnSeries(current,START_CASH);
+    var scen=burnSeries(SCEN,START_CASH);
     panel.style.display='block';
-    document.getElementById('pfCashChart').innerHTML=buildCashSVG({y0:cur.y0,base:cur.series,withOA:scen.series,count:0});
-    // stats
-    var minV=Math.min.apply(null,scen.series),minI=scen.series.indexOf(minV);
-    var minCur=Math.min.apply(null,cur.series);
-    var burnCur=cur.series.map(function(v,i){return (i===0?0:cur.series[i-1])-v;});
+    document.getElementById('pfCashChart').innerHTML=pfCashSVG(y0,cur,scen)
+     +'<div style="display:flex;gap:18px;font-size:11px;color:var(--muted);margin-top:7px;flex-wrap:wrap">'
+     +'<span><span style="display:inline-block;width:26px;border-top:3px solid #B58121;vertical-align:middle;margin-right:6px"></span><b>Your scenario</b> (checked items)</span>'
+     +'<span><span style="display:inline-block;width:26px;border-top:2px dashed #9AA8B8;vertical-align:middle;margin-right:6px"></span>Committed today (reference)</span>'
+     +'<span>Balance = starting cash − build spend + operating net. Yearly budget top-ups not auto-added — adjust starting cash to test funding levels.</span></div>';
+    var minS=Math.min.apply(null,scen),minSI=scen.indexOf(minS);
+    var minC=Math.min.apply(null,cur);
     function stat(lab,val,col){return '<div style="background:#F6F9FC;border:1px solid #DBE5EF;border-radius:9px;padding:8px 13px"><div style="font-size:9px;font-weight:800;letter-spacing:.7px;color:#8A98A8">'+lab+'</div><div style="font-size:16px;font-weight:800;color:'+(col||'var(--navy)')+'">'+val+'</div></div>';}
     document.getElementById('pfCashStats').innerHTML=
-      stat('LOWEST BALANCE — CURRENT','US$'+minCur.toFixed(1)+'M',minCur<0?'var(--red)':'var(--navy)')
-     +stat('LOWEST BALANCE — SCENARIO','US$'+minV.toFixed(1)+'M in '+(scen.y0+minI),minV<0?'var(--red)':'var(--green)')
-     +stat('YEAR-5 BALANCE — SCENARIO','US$'+scen.series[4].toFixed(1)+'M',scen.series[4]<0?'var(--red)':'var(--navy)')
-     +stat('SCENARIO VS CURRENT (Y5)',(scen.series[4]-cur.series[4]>=0?'+':'')+ (scen.series[4]-cur.series[4]).toFixed(1)+'M',(scen.series[4]-cur.series[4])<0?'#8A5A00':'var(--green)');
+      stat('BURN — COMMITTED TODAY','US$'+(START_CASH-minC).toFixed(1)+'M of US$'+START_CASH.toFixed(1)+'M',minC<0?'var(--red)':'var(--navy)')
+     +stat('BURN — YOUR SCENARIO','US$'+(START_CASH-minS).toFixed(1)+'M · bottom '+(minSI===0?'now':(y0+minSI-1)),minS<0?'var(--red)':'#8A5A00')
+     +stat('LOWEST BALANCE — SCENARIO','US$'+minS.toFixed(1)+'M',minS<0?'var(--red)':'var(--green)')
+     +stat('YEAR-5 BALANCE — SCENARIO','US$'+scen[5].toFixed(1)+'M',scen[5]<0?'var(--red)':'var(--navy)');
     // toggles
     var appr=OPPS.filter(function(o){return o.status==='go'});
     var oas=OPPS.filter(function(o){return o.status!=='go'&&o.status!=='rejected'});
     function row(o){
       var f=oaCashFigures(o);
       return '<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #F0F3F7;cursor:pointer">'
-       +'<input type="checkbox" '+(SCEN[o.id]?'checked':'')+' onchange="scenToggle('+o.id+')" style="margin-top:2px;accent-color:#3A6EA8">'
-       +'<span style="flex:1"><b style="color:var(--navy);font-size:12px">'+o.name+'</b><br><span style="font-size:10.5px;color:#8A98A8">inv US$'+f.inv.toFixed(1)+'M · net US$'+f.net.toFixed(1)+'M/yr'+(o.status==='parked'?' · parked':'')+'</span></span></label>';
+       +'<input type="checkbox" '+(SCEN[o.id]?'checked':'')+' onchange="scenToggle('+o.id+')" style="margin-top:2px;accent-color:#B58121">'
+       +'<span style="flex:1"><b style="color:var(--navy);font-size:12px">'+o.name+'</b><br><span style="font-size:10.5px;color:#8A98A8">burns US$'+f.inv.toFixed(1)+'M over '+f.buildYears+'yr'+(f.net?' · returns US$'+f.net.toFixed(1)+'M/yr after':'')+(o.status==='parked'?' · parked':'')+'</span></span></label>';
     }
     document.getElementById('scenToggles').innerHTML=
       '<div style="font-size:9.5px;font-weight:800;letter-spacing:.8px;color:var(--green);margin-bottom:4px">APPROVED — UNCHECK TO SIMULATE REMOVAL</div>'
