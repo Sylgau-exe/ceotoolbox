@@ -84,6 +84,22 @@ function howto(t){return '<div class="htr"><b>How to read it</b><p>'+t+'</p></di
 var foot='<div class="dfoot">CEO Toolbox — GSM Decision Platform · Sun Group Entertainment (GSM) · Concept architecture for future development · Panda Projet Inc. · Draft July 2026</div>';
 
 var DIAGRAMS={
+// ============================== PM ==============================
+pm: head('CEO TOOLBOX — FUTURE MODULE','Project Management','From approved constraint sheet to delivered opening night — plans, gates, vendor payments','ROADMAP · AFTER PORTFOLIO')
+ +'<div class="row">'
+ +box('blue','1','WHAT COMES IN','The GO decision from the Decision Portfolio: constraint sheet (the two gates), CDA check, viability numbers and the high-level schedule from the opportunity assessment.')
+ +box('blue','2','THE MASTER SCHEDULE','Month-level plan per project: creative development · production &amp; build · installation · rehearsals · opening · ramp-up. Dependencies and critical path — the portfolio Gantt, deepened.')
+ +'</div>'
+ +'<div class="arrow">▼</div>'
+ +box('navy','3','GATES, NOT DATES','Vendor payments tied to gate acceptance, not calendar dates: concept approved · design frozen · build complete · installed &amp; tested · opened. A slipping vendor delays their own cash, not the group\'s.')
+ +'<div class="arrow">▼</div>'
+ +'<div class="row">'
+ +box('green','4','PROGRESS VS PROMISE','Spend vs the Cash-to-Cash curve · schedule vs plan · scope vs constraint sheet. Deviations flagged early and fed straight to the Company Dashboard.')
+ +box('amber','5','THE CEO VIEW','One page per project: schedule health, gate status, cash position and the next decision needed. No surprise ever travels faster than this page.')
+ +'</div>'
+ +howto('The portfolio\'s GO hands the module a funded, constrained project (1); it becomes a month-level master schedule (2). Vendors are paid on accepted gates, never dates (3); progress is measured against the promises made at approval (4), and leadership steers from one page (5).')
+ +foot,
+
 // ============================== TCO ==============================
 tco: head('CEO TOOLBOX — FUTURE MODULE','TCO / Lifecycle Costing','The whole truth about what a concept costs — before a contract is signed','ROADMAP · AFTER PORTFOLIO')
  +'<div class="row">'
@@ -132,7 +148,7 @@ dashboard: head('CEO TOOLBOX — FUTURE MODULE','Company Dashboard','Operational
  +howto('Shows (1) and projects (2) feed one shared data layer (3) — the same base the whole toolbox runs on. The CEO works from the exceptions-first page (4); the board gets the same truth in a printable pack (5). The strategic loop closes: model → constraints → vendors → operations → back to the model.')
  +foot
 };
-var TITLES={tco:'TCO / Lifecycle Costing',cash:'Cash-to-Cash Model',dashboard:'Company Dashboard'};
+var TITLES={tco:'TCO / Lifecycle Costing',cash:'Cash-to-Cash Model',dashboard:'Company Dashboard',pm:'Project Management'};
 document.getElementById('diagram').innerHTML=DIAGRAMS[m]||DIAGRAMS.tco;
 document.getElementById('hsub').textContent='Roadmap concept — '+(TITLES[m]||'TCO');
 document.title=(TITLES[m]||'Roadmap')+' — CEO Toolbox';
