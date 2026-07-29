@@ -32,6 +32,8 @@
   .lact{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .lact .btn{padding:6px 10px;font-size:11.5px}
   .sectdiv{border-top:3px solid var(--navy);margin-top:26px}
+  .lrow.approved{background:#F1F7F3;border:1.5px solid #7FB394;border-left:5px solid var(--green)}
+  .lrow.approved .lname{color:var(--green)}
   .sect{font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel);margin:22px 0 2px;display:flex;align-items:center;gap:8px}
   .sect .n{background:#EDF2F8;border-radius:99px;padding:2px 9px;color:var(--navy)}
   @media(max-width:900px){#sidebar{position:static}main>div{grid-template-columns:1fr!important}}
@@ -316,7 +318,7 @@ function oppRow(o,isOA){
   if(ROLE==='pm'&&o.status==='go')acts+='<button class="btn ghost" onclick="location.href=\'model.html\'">Model →</button>';
   if(ROLE==='pm'&&isOA&&o.status!=='parked')acts+='<button class="btn ghost" onclick="setStatus('+o.id+',\'parked\')">Park</button>';
   if(ROLE==='pm'&&o.status==='parked')acts+='<button class="btn ghost" onclick="setStatus('+o.id+',\'proposed\')">Unpark</button>';
-  return '<div class="lrow">'
+  return '<div class="lrow'+(isOA?'':' approved')+'">'
    +'<div><div class="lname">'+o.name+'</div><div class="lmeta">📍 '+o.city+' · '+(o.otype||'').replace('-',' ')+(o.sponsor?' · '+o.sponsor:'')+(o.est_timeline?' · ⏱ '+o.est_timeline:'')+'</div></div>'
    +'<div><span class="llab">EST. INV</span><span class="lval">'+(o.est_investment!=null?('US$'+Number(o.est_investment).toFixed(1)+'M'):'—')+'</span></div>'
    +'<div><span class="llab">VIABILITY</span>'+viabChip(o)+'</div>'
