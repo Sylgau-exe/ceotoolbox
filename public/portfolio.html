@@ -127,7 +127,9 @@
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div><h3 id="mtitle">New Opportunity Assessment</h3>
       <div style="font-size:11.5px;color:var(--muted)">The BD intake document — enough to understand, estimate and score the opportunity. Phase: Initiation.</div></div>
-      <button class="btn ghost" id="printAssessBtn" style="display:none;padding:7px 12px;font-size:12px" onclick="printAssessment()">🖨 Print assessment</button>
+      <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn ghost" id="viabBtn" style="display:none;padding:7px 12px;font-size:12px" onclick="viabFromModal()">🔎 Viability check →</button>
+      <button class="btn ghost" id="printAssessBtn" style="display:none;padding:7px 12px;font-size:12px" onclick="printAssessment()">🖨 Print assessment</button></span>
     </div>
 
     <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-top:16px;border-bottom:1px solid var(--line);padding-bottom:4px">HEADER</div>
@@ -176,6 +178,7 @@
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" style="background:var(--steel)" onclick="saveOpp(true)">Save &amp; run viability →</button>
       <button class="btn" id="saveBtn" onclick="saveOpp()">Create</button>
     </div>
   </div>
@@ -408,6 +411,7 @@ function critInputs(scores){
 }
 function openNew(){editing=null;document.getElementById('mtitle').textContent='New Opportunity Assessment';document.getElementById('saveBtn').textContent='Create';
   document.getElementById('printAssessBtn').style.display='none';
+  document.getElementById('viabBtn').style.display='none';
   ['f_name','f_ip','f_sponsor','f_partner','f_intro','f_benefits','f_scope','f_constraints','f_success','f_finfront','f_finback','f_fincredits','f_time'].forEach(function(i){document.getElementById(i).value=''});
   document.getElementById('riskRows').innerHTML='';['Creative','Production','Profitability'].forEach(function(r){addRisk({risk:r,level:'low'})});
   document.getElementById('estRows').innerHTML='';addEst();addEst();
@@ -419,6 +423,7 @@ function openEdit(id){
   editing=o;var a=o.assessment||{};
   document.getElementById('mtitle').textContent='Opportunity Assessment — '+o.name;document.getElementById('saveBtn').textContent='Save';
   document.getElementById('printAssessBtn').style.display='inline-block';
+  document.getElementById('viabBtn').style.display='inline-block';
   document.getElementById('f_name').value=o.name;document.getElementById('f_city').value=o.city;
   document.getElementById('f_type').value=o.otype||'new-show';document.getElementById('f_sponsor').value=o.sponsor||'';
   document.getElementById('f_ip').value=a.ip_owner||'';document.getElementById('f_partner').value=a.partner_contact||'';
@@ -434,7 +439,8 @@ function openEdit(id){
   document.getElementById('modal').style.display='flex';}
 function closeModal(){document.getElementById('modal').style.display='none';}
 
-async function saveOpp(){
+function viabFromModal(){if(editing)runViability(editing.id);}
+async function saveOpp(goViability){
   var estRows=rowsGet('#estRows .estrow');
   var estSum=estRows.reduce(function(t,e){return t+(Number(e.cost)||0)},0);
   var assessment={ip_owner:document.getElementById('f_ip').value.trim(),partner_contact:document.getElementById('f_partner').value.trim(),
@@ -452,8 +458,16 @@ async function saveOpp(){
   try{
     var method='POST';if(editing){body.id=editing.id;method='PATCH';}
     var r=await fetch('/api/opportunities',{method:method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)});
-    if(!r.ok)throw new Error((await r.json()).error||r.status);
-    closeModal();load();toast('Charter saved.');
+    var data=await r.json();
+    if(!r.ok)throw new Error(data.error||r.status);
+    var oid=editing?editing.id:(data.opportunity&&data.opportunity.id);
+    closeModal();
+    if(goViability&&oid){
+      var c=body.city==='Vietnam'?'Ho Chi Minh City':body.city;
+      location.href='model.html?city='+encodeURIComponent(c)+'&opp='+oid+'&oname='+encodeURIComponent(body.name);
+      return;
+    }
+    load();toast('Assessment saved.');
   }catch(e){toast('Save failed: '+e.message);}
 }
 function printAssessment(){
