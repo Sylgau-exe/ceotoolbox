@@ -11,6 +11,11 @@ export default async function handler(req, res) {
   if (!decoded) return;
 
   try {
+    await sql`CREATE TABLE IF NOT EXISTS projects (
+      id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(120) NOT NULL, code VARCHAR(30), city VARCHAR(80) NOT NULL,
+      status VARCHAR(30) DEFAULT 'exploration', description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`;
+    await sql`ALTER TABLE scenarios ADD COLUMN IF NOT EXISTS project_id INTEGER`;
     if (req.method === 'GET') {
       const result = await sql`
         SELECT p.*, COALESCE(s.cnt,0) AS scenario_count, s.latest_outputs

@@ -11,6 +11,10 @@ export default async function handler(req, res) {
   if (!decoded) return;
 
   try {
+    await sql`CREATE TABLE IF NOT EXISTS sources (
+      id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(200) NOT NULL, url TEXT NOT NULL, city VARCHAR(80) NOT NULL,
+      kind VARCHAR(30) DEFAULT 'website', language VARCHAR(10) DEFAULT 'vi', notes TEXT,
+      status VARCHAR(20) DEFAULT 'pending', last_collected_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`;
     if (req.method === 'GET') {
       const city = req.query.city ? String(req.query.city) : null;
       const result = city

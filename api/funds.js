@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   const decoded = await requireAuth(req, res);
   if (!decoded) return;
   try {
+    await sql`CREATE TABLE IF NOT EXISTS portfolio_funds (year INTEGER PRIMARY KEY, funds NUMERIC NOT NULL DEFAULT 0)`;
     if (req.method === 'GET') {
       const result = await sql`SELECT year, funds FROM portfolio_funds ORDER BY year`;
       return res.status(200).json({ funds: result.rows.map(r => ({ year: r.year, funds: Number(r.funds) })) });

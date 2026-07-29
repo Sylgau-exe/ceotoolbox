@@ -4,6 +4,19 @@ import { cors, requireAuth } from '../lib/auth.js';
 
 if (!process.env.POSTGRES_URL && process.env.DATABASE_URL) { process.env.POSTGRES_URL = process.env.DATABASE_URL; }
 
+let ensured = false;
+async function ensureSchema() {
+  if (ensured) return;
+  await sql`CREATE TABLE IF NOT EXISTS opportunities (
+    id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(160) NOT NULL, city VARCHAR(80) NOT NULL,
+    otype VARCHAR(40) DEFAULT 'new-show', sponsor VARCHAR(120), objective TEXT, strategic_link TEXT,
+    est_investment NUMERIC, est_timeline VARCHAR(60), scores JSONB DEFAULT '{}', status VARCHAR(20) DEFAULT 'proposed',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`;
+  await sql`ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS assessment JSONB DEFAULT '{}'`;
+  await sql`ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS viability JSONB`;
+  ensured = true;
+}
+
 export default async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -11,6 +24,7 @@ export default async function handler(req, res) {
   if (!decoded) return;
 
   try {
+    await ensureSchema();
     if (req.method === 'GET') {
       const result = await sql`
         SELECT o.*, u.name AS created_by FROM opportunities o
