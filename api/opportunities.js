@@ -19,17 +19,18 @@ export default async function handler(req, res) {
       return res.status(200).json({ opportunities: result.rows });
     }
     if (req.method === 'POST') {
-      const { name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores } = req.body || {};
+      const { name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores, assessment } = req.body || {};
       if (!name || !city) return res.status(400).json({ error: 'name and city are required' });
       const result = await sql`
         INSERT INTO opportunities (user_id, name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores)
         VALUES (${decoded.userId}, ${name}, ${city}, ${otype || 'new-show'}, ${sponsor || null}, ${objective || null},
                 ${strategic_link || null}, ${est_investment || null}, ${est_timeline || null}, ${JSON.stringify(scores || {})})
         RETURNING *`;
+      if (assessment) await sql`UPDATE opportunities SET assessment = ${JSON.stringify(assessment)} WHERE id = ${result.rows[0].id}`;
       return res.status(201).json({ opportunity: result.rows[0] });
     }
     if (req.method === 'PATCH') {
-      const { id, name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores, status } = req.body || {};
+      const { id, name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores, status, assessment } = req.body || {};
       if (!id) return res.status(400).json({ error: 'id required' });
       const result = await sql`
         UPDATE opportunities SET
@@ -38,6 +39,7 @@ export default async function handler(req, res) {
           strategic_link = COALESCE(${strategic_link}, strategic_link),
           est_investment = COALESCE(${est_investment}, est_investment), est_timeline = COALESCE(${est_timeline}, est_timeline),
           scores = COALESCE(${scores ? JSON.stringify(scores) : null}, scores),
+          assessment = COALESCE(${assessment ? JSON.stringify(assessment) : null}, assessment),
           status = COALESCE(${status}, status), updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id} RETURNING *`;
       return res.status(200).json({ opportunity: result.rows[0] });

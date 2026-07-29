@@ -58,6 +58,17 @@
   .weights .crit input{width:64px;padding:5px 8px;text-align:right}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;border-radius:9px;padding:11px 20px;font-size:13.5px;display:none;z-index:60}
   footer{text-align:center;color:#9AA8B8;font-size:11.5px;padding:26px}
+  @media print{
+    body *{visibility:hidden}
+    #assessPrint,#assessPrint *{visibility:visible}
+    #assessPrint{display:block!important;position:absolute;left:0;top:0;width:100%;padding:28px;font-size:12px}
+    #assessPrint h1{font-size:20px;color:#1E3A5F}
+    #assessPrint h4{font-size:10.5px;letter-spacing:1px;color:#5B7A9D;margin:14px 0 4px;border-bottom:1px solid #E2E8F0;padding-bottom:3px}
+    #assessPrint table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}
+    #assessPrint th,#assessPrint td{border:1px solid #E2E8F0;padding:4px 7px;text-align:left}
+    #assessPrint th{background:#F4F6F9}
+    #assessPrint p{margin:2px 0;line-height:1.5;color:#22303F}
+  }
   .empty{margin-top:24px;background:#fff;border:1.5px dashed var(--line);border-radius:13px;padding:40px;text-align:center;color:var(--muted);font-size:14px;display:none}
 </style>
 </head>
@@ -65,7 +76,7 @@
 <header>
   <div style="display:flex;align-items:center">
     <div class="wordmark" onclick="location.href='app.html'">CEO<span>TOOLBOX</span></div>
-    <div class="hsub">Decision Portfolio</div>
+    <div class="hsub">Decision Portfolio — Opportunity Assessments</div>
   </div>
   <div class="hright"><a href="app.html">Home</a><a href="dashboard.html">Market Intelligence</a><a href="model.html">Business Model</a><a onclick="signOut()" style="cursor:pointer">Sign out</a></div>
 </header>
@@ -73,19 +84,19 @@
   <div class="topbar">
     <div>
       <h1>Decision Portfolio</h1>
-      <div class="sub">Every opportunity as a lightweight charter, scored on the same criteria — one ranked portfolio instead of scattered vendor pitches. GO sends it to the Business Model as a project.</div>
+      <div class="sub">Every opportunity documented as a BD Opportunity Assessment — trigger, benefits, scope, risks, order-of-magnitude case — and scored on the same criteria. One ranked portfolio; GO sends it to the Business Model as a project.</div>
     </div>
-    <button class="btn" onclick="openNew()">＋ New charter</button>
+    <button class="btn" onclick="openNew()">＋ New assessment</button>
   </div>
 
   <div class="tabs">
-    <button class="tab on" id="tabCards" onclick="setView('cards')">Charters</button>
+    <button class="tab on" id="tabCards" onclick="setView('cards')">Assessments</button>
     <button class="tab" id="tabRank" onclick="setView('rank')">Ranking</button>
   </div>
 
   <div id="cardsView" class="grid"></div>
   <div id="rankView" style="display:none"></div>
-  <div class="empty" id="empty">No charters yet — add the first opportunity.</div>
+  <div class="empty" id="empty">No assessments yet — document the first opportunity.</div>
 
   <div class="weights" id="weightsBox" style="max-width:560px">
     <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-bottom:4px">SCORING WEIGHTS — one set of rules for every opportunity</div>
@@ -93,33 +104,69 @@
   </div>
 </main>
 
-<!-- charter modal -->
+<!-- assessment modal -->
 <div class="modal" id="modal">
-  <div class="mbox">
-    <h3 id="mtitle">New charter</h3>
-    <div style="font-size:11.5px;color:var(--muted)">Lightweight by design — one page, enough to score. Not a business case.</div>
-    <div class="mgrid">
-      <div><label>Opportunity name</label><input id="f_name" placeholder="Anchor show — Da Nang"></div>
-      <div><label>City</label><select id="f_city"><option>Ho Chi Minh City</option><option>Hanoi</option><option>Da Nang</option><option>Nha Trang</option><option>Phu Quoc</option><option>Vietnam</option></select></div>
-      <div><label>Type</label><select id="f_type">
-        <option value="new-show">New show</option><option value="attraction">Attraction</option><option value="venue">Venue</option>
-        <option value="partnership">Partnership</option><option value="phase2-revenue">Phase-2 revenue</option><option value="other">Other</option></select></div>
-      <div><label>Sponsor</label><input id="f_sponsor" placeholder="GSM BD"></div>
-      <div><label>Est. investment (US$M)</label><input id="f_inv" type="number" step="0.1" min="0"></div>
-      <div><label>Est. timeline</label><input id="f_time" placeholder="18 months"></div>
+  <div class="mbox" style="max-width:760px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+      <div><h3 id="mtitle">New Opportunity Assessment</h3>
+      <div style="font-size:11.5px;color:var(--muted)">The BD intake document — enough to understand, estimate and score the opportunity. Phase: Initiation.</div></div>
+      <button class="btn ghost" id="printAssessBtn" style="display:none;padding:7px 12px;font-size:12px" onclick="printAssessment()">🖨 Print assessment</button>
     </div>
-    <label>Objective — what does success look like?</label>
-    <textarea id="f_obj" rows="2"></textarea>
-    <label>Strategic link — why Sun Group, why now?</label>
-    <textarea id="f_link" rows="2"></textarea>
-    <label style="margin-top:14px;font-size:11px;letter-spacing:.8px;color:var(--steel)">SCORING (0 = weak · 5 = strong)</label>
+
+    <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-top:16px;border-bottom:1px solid var(--line);padding-bottom:4px">HEADER</div>
+    <div class="mgrid">
+      <div><label>Title</label><input id="f_name" placeholder="James Bond 60th Anniversary"></div>
+      <div><label>City / territory</label><select id="f_city"><option>Ho Chi Minh City</option><option>Hanoi</option><option>Da Nang</option><option>Nha Trang</option><option>Phu Quoc</option><option>Vietnam</option></select></div>
+      <div><label>Category</label><select id="f_type">
+        <option value="new-show">New show</option><option value="event">Event</option><option value="attraction">Attraction</option><option value="venue">Venue</option>
+        <option value="partnership">Partnership</option><option value="phase2-revenue">Phase-2 revenue</option><option value="other">Other</option></select></div>
+      <div><label>IP owner / rights holder</label><input id="f_ip" placeholder="EON, MGM/Amazon"></div>
+      <div><label>Opportunity owner (BD)</label><input id="f_sponsor" placeholder="Name"></div>
+      <div><label>Partner contact</label><input id="f_partner" placeholder="Name / company"></div>
+    </div>
+
+    <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:4px">1.0 — 5.0 THE OPPORTUNITY</div>
+    <label>1.0 Introduction — the elements that trigger the problematic</label><textarea id="f_intro" rows="2" placeholder="What happened, who brought it, why now?"></textarea>
+    <label>2.0 Potential benefits — tangible and non-tangible</label><textarea id="f_benefits" rows="2"></textarea>
+    <label>3.0 Scope — scale · key deliverables · interrelationships · exclusions</label><textarea id="f_scope" rows="3" placeholder="Scale of the solution / What must be produced / Links to other projects / What is NOT part of it"></textarea>
+    <label>4.0 Constraints — budget, schedule, resources…</label><textarea id="f_constraints" rows="2"></textarea>
+    <label>5.0 Criteria for success</label><textarea id="f_success" rows="2"></textarea>
+
+    <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:4px">6.0 HIGH-LEVEL PLAN</div>
+    <label>Risk factors &amp; strategy</label>
+    <div id="riskRows"></div>
+    <a style="font-size:12px;color:var(--steel);cursor:pointer;font-weight:700" onclick="addRisk()">＋ add risk</a>
+    <label style="margin-top:14px">Project estimate — order of magnitude</label>
+    <div id="estRows"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <a style="font-size:12px;color:var(--steel);cursor:pointer;font-weight:700" onclick="addEst()">＋ add line</a>
+      <span style="font-size:12.5px;font-weight:800;color:var(--navy)" id="estTotal"></span>
+    </div>
+    <div class="mgrid" style="margin-top:8px">
+      <div><label>Source of financing — front end</label><input id="f_finfront" placeholder="Producer, sponsors"></div>
+      <div><label>Back end</label><input id="f_finback" placeholder="Ticketing, F&amp;B, merchandising"></div>
+      <div><label>Credits / other</label><input id="f_fincredits" placeholder="Tax credits, incentives"></div>
+      <div><label>Overall timeline (guide)</label><input id="f_time" placeholder="12 months to event"></div>
+    </div>
+    <label style="margin-top:10px">Draft schedule — key activities</label>
+    <div id="schedRows"></div>
+    <a style="font-size:12px;color:var(--steel);cursor:pointer;font-weight:700" onclick="addSched()">＋ add activity</a>
+
+    <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:4px">8.0 CASE — BEST · MOST PROBABLE · WORST (US$ or local)</div>
+    <div style="overflow-x:auto"><table style="margin-top:8px;border:1px solid var(--line)" id="caseTable">
+      <tr><th></th><th>BEST</th><th>MOST PROBABLE</th><th>WORST</th><th>ASSUMPTIONS</th></tr>
+    </table></div>
+
+    <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:4px">SCORING (0 = weak · 5 = strong)</div>
     <div id="critRows"></div>
+
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
       <button class="btn" id="saveBtn" onclick="saveOpp()">Create</button>
     </div>
   </div>
 </div>
+<div id="assessPrint" style="display:none"></div>
 <div class="toast" id="toast"></div>
 <footer>Confidential · Sun Group Entertainment (GSM) · CEO Toolbox — GSM Decision Platform</footer>
 
@@ -177,7 +224,7 @@ function renderAll(){
      +'<div class="ofacts">'+(o.est_investment!=null?('<span>💰 ~US$'+Number(o.est_investment).toFixed(1)+'M</span>'):'')
      +(o.est_timeline?('<span>⏱ '+o.est_timeline+'</span>'):'')+'</div>'
      +bar(pct)
-     +'<div class="rowb"><button class="btn ghost" onclick=\'openEdit('+o.id+')\'>Edit / score</button>'
+     +'<div class="rowb"><button class="btn ghost" onclick=\'openEdit('+o.id+')\'>Open assessment</button>'
      +(o.status!=='go'?'<button class="btn green" onclick="gateGo('+o.id+')">GO → project</button>':'<button class="btn ghost" onclick="location.href=\'model.html\'">Open model →</button>')
      +(o.status!=='parked'&&o.status!=='go'?'<button class="btn ghost" onclick="setStatus('+o.id+',\'parked\')">Park</button>':'')
      +(o.status==='parked'?'<button class="btn ghost" onclick="setStatus('+o.id+',\'scored\')">Unpark</button>':'')
@@ -193,8 +240,52 @@ function renderAll(){
       +'<td>'+(r.o.est_investment!=null?('US$'+Number(r.o.est_investment).toFixed(1)+'M'):'—')+'</td>'
       +'<td><span class="status s-'+r.o.status+'">'+(STATUS_LBL[r.o.status]||r.o.status)+'</span></td></tr>';
    }).join('')+'</table>'
-   +'<div style="font-size:11px;color:#8A98A8;margin-top:10px">Scores are weighted composites (0–100) of the five criteria — same rules for every opportunity. Unscored charters sink to the bottom until someone does the work.</div>';
+   +'<div style="font-size:11px;color:#8A98A8;margin-top:10px">Scores are weighted composites (0–100) of the five criteria — same rules for every opportunity. Unscored opportunities sink to the bottom until someone does the assessment.</div>';
 }
+
+// ---- dynamic assessment rows ----
+function riskRow(r){r=r||{};return '<div style="display:grid;grid-template-columns:1.2fr .6fr 1.6fr 24px;gap:6px;margin:5px 0" class="riskrow">'
+ +'<input placeholder="Risk (e.g. Creative)" value="'+(r.risk||'')+'" data-f="risk">'
+ +'<select data-f="level"><option'+(r.level==='low'?' selected':'')+'>low</option><option'+(r.level==='medium'?' selected':'')+'>medium</option><option'+(r.level==='high'?' selected':'')+'>high</option></select>'
+ +'<input placeholder="Strategy (e.g. proven creative team)" value="'+(r.strategy||'')+'" data-f="strategy">'
+ +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove()">×</a></div>';}
+function addRisk(r){document.getElementById('riskRows').insertAdjacentHTML('beforeend',riskRow(r));}
+function estRow(e){e=e||{};return '<div style="display:grid;grid-template-columns:1.6fr .6fr 1.6fr 24px;gap:6px;margin:5px 0" class="estrow">'
+ +'<input placeholder="Topic (e.g. Production)" value="'+(e.topic||'')+'" data-f="topic">'
+ +'<input type="number" step="1000" placeholder="$" value="'+(e.cost!=null?e.cost:'')+'" data-f="cost" onchange="estTotal()">'
+ +'<input placeholder="Remark (front/back end, contingency…)" value="'+(e.remark||'')+'" data-f="remark">'
+ +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove();estTotal()">×</a></div>';}
+function addEst(e){document.getElementById('estRows').insertAdjacentHTML('beforeend',estRow(e));estTotal();}
+function estTotal(){var t=0;document.querySelectorAll('#estRows [data-f=cost]').forEach(function(i){t+=Number(i.value)||0});
+ document.getElementById('estTotal').textContent=t?('Planned total: '+t.toLocaleString('en-US')):'';}
+function schedRow(x){x=x||{};return '<div style="display:grid;grid-template-columns:1.6fr .8fr 1.6fr 24px;gap:6px;margin:5px 0" class="schedrow">'
+ +'<input placeholder="Activity (e.g. Secure rights)" value="'+(x.activity||'')+'" data-f="activity">'
+ +'<input placeholder="Target" value="'+(x.target||'')+'" data-f="target">'
+ +'<input placeholder="Remark" value="'+(x.remark||'')+'" data-f="remark">'
+ +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove()">×</a></div>';}
+function addSched(x){document.getElementById('schedRows').insertAdjacentHTML('beforeend',schedRow(x));}
+var CASE_ROWS=[['ticketing','Revenue — ticketing'],['sponsors','Revenue — sponsors'],['other','Revenue — other'],['cost','Total cost']];
+function renderCase(cs){cs=cs||{};
+ var t=document.getElementById('caseTable');
+ t.innerHTML='<tr><th></th><th>BEST</th><th>MOST PROBABLE</th><th>WORST</th><th>ASSUMPTIONS</th></tr>'
+  +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};
+   return '<tr data-row="'+rw[0]+'"><td style="font-weight:700;font-size:12px">'+rw[1]+'</td>'
+    +['best','probable','worst'].map(function(k){return '<td><input type="number" style="width:92px;padding:5px" value="'+(v[k]!=null?v[k]:'')+'" data-k="'+k+'" onchange="caseProfit()"></td>';}).join('')
+    +'<td><input style="width:100%;min-width:120px;padding:5px" value="'+(v.assumptions||'')+'" data-k="assumptions"></td></tr>';}).join('')
+  +'<tr id="profitRow"><td style="font-weight:800;color:var(--navy)">Profit</td><td></td><td></td><td></td><td style="font-size:11px;color:var(--muted)">computed</td></tr>';
+ caseProfit();
+}
+function caseGet(){var cs={};document.querySelectorAll('#caseTable tr[data-row]').forEach(function(tr){
+  var o={};tr.querySelectorAll('input').forEach(function(i){o[i.dataset.k]=i.dataset.k==='assumptions'?i.value:(i.value===''?null:Number(i.value));});
+  cs[tr.dataset.row]=o;});return cs;}
+function caseProfit(){var cs=caseGet();var cells=document.querySelectorAll('#profitRow td');
+ ['best','probable','worst'].forEach(function(k,i){
+  var rev=(cs.ticketing&&cs.ticketing[k]||0)+(cs.sponsors&&cs.sponsors[k]||0)+(cs.other&&cs.other[k]||0);
+  var cost=cs.cost&&cs.cost[k]||0;var p=rev-cost;
+  cells[i+1].innerHTML='<b style="color:'+(p>=0?'var(--green)':'var(--red)')+'">'+(rev||cost?p.toLocaleString('en-US'):'—')+'</b>';});}
+function rowsGet(sel){var out=[];document.querySelectorAll(sel).forEach(function(row){
+  var o={};row.querySelectorAll('[data-f]').forEach(function(i){o[i.dataset.f]=i.value;});
+  if(Object.values(o).some(function(v){return v&&String(v).trim()}))out.push(o);});return out;}
 
 function critInputs(scores){
   return CRITERIA.map(function(c,i){
@@ -202,17 +293,32 @@ function critInputs(scores){
     return '<div class="crit"><label>'+c.label+'</label><input type="range" min="0" max="5" step="1" value="'+(v===''?0:v)+'" oninput="this.nextElementSibling.textContent=this.value" data-k="'+c.key+'"><b>'+(v===''?0:v)+'</b></div>';
   }).join('');
 }
-function openNew(){editing=null;document.getElementById('mtitle').textContent='New charter';document.getElementById('saveBtn').textContent='Create';
-  ['f_name','f_sponsor','f_inv','f_time','f_obj','f_link'].forEach(function(i){document.getElementById(i).value=''});
+function openNew(){editing=null;document.getElementById('mtitle').textContent='New Opportunity Assessment';document.getElementById('saveBtn').textContent='Create';
+  document.getElementById('printAssessBtn').style.display='none';
+  ['f_name','f_ip','f_sponsor','f_partner','f_intro','f_benefits','f_scope','f_constraints','f_success','f_finfront','f_finback','f_fincredits','f_time'].forEach(function(i){document.getElementById(i).value=''});
+  document.getElementById('riskRows').innerHTML='';['Creative','Production','Profitability'].forEach(function(r){addRisk({risk:r,level:'low'})});
+  document.getElementById('estRows').innerHTML='';addEst();addEst();
+  document.getElementById('schedRows').innerHTML='';addSched();addSched();
+  renderCase(null);
   document.getElementById('critRows').innerHTML=critInputs(null);
   document.getElementById('modal').style.display='flex';}
 function openEdit(id){
   var o=OPPS.find(function(x){return x.id===id});if(!o)return;
-  editing=o;document.getElementById('mtitle').textContent='Charter — '+o.name;document.getElementById('saveBtn').textContent='Save';
+  editing=o;var a=o.assessment||{};
+  document.getElementById('mtitle').textContent='Opportunity Assessment — '+o.name;document.getElementById('saveBtn').textContent='Save';
+  document.getElementById('printAssessBtn').style.display='inline-block';
   document.getElementById('f_name').value=o.name;document.getElementById('f_city').value=o.city;
   document.getElementById('f_type').value=o.otype||'new-show';document.getElementById('f_sponsor').value=o.sponsor||'';
-  document.getElementById('f_inv').value=o.est_investment!=null?o.est_investment:'';document.getElementById('f_time').value=o.est_timeline||'';
-  document.getElementById('f_obj').value=o.objective||'';document.getElementById('f_link').value=o.strategic_link||'';
+  document.getElementById('f_ip').value=a.ip_owner||'';document.getElementById('f_partner').value=a.partner_contact||'';
+  document.getElementById('f_intro').value=a.intro||o.objective||'';document.getElementById('f_benefits').value=a.benefits||'';
+  document.getElementById('f_scope').value=a.scope||'';document.getElementById('f_constraints').value=a.constraints||'';
+  document.getElementById('f_success').value=a.success||o.strategic_link||'';
+  document.getElementById('f_finfront').value=a.fin_front||'';document.getElementById('f_finback').value=a.fin_back||'';
+  document.getElementById('f_fincredits').value=a.fin_credits||'';document.getElementById('f_time').value=o.est_timeline||'';
+  document.getElementById('riskRows').innerHTML='';(a.risks&&a.risks.length?a.risks:[{risk:'Creative',level:'low'},{risk:'Production',level:'low'},{risk:'Profitability',level:'low'}]).forEach(addRisk);
+  document.getElementById('estRows').innerHTML='';(a.estimate&&a.estimate.length?a.estimate:[{},{}]).forEach(function(e){addEst(e)});
+  document.getElementById('schedRows').innerHTML='';(a.schedule&&a.schedule.length?a.schedule:[{},{}]).forEach(addSched);
+  renderCase(a.case);
   document.getElementById('critRows').innerHTML=critInputs(o.scores);
   document.getElementById('modal').style.display='flex';}
 function closeModal(){document.getElementById('modal').style.display='none';}
@@ -221,11 +327,19 @@ function collectScores(){
   return s;
 }
 async function saveOpp(){
+  var estRows=rowsGet('#estRows .estrow');
+  var estSum=estRows.reduce(function(t,e){return t+(Number(e.cost)||0)},0);
+  var assessment={ip_owner:document.getElementById('f_ip').value.trim(),partner_contact:document.getElementById('f_partner').value.trim(),
+    phase:'Initiation',intro:document.getElementById('f_intro').value.trim(),benefits:document.getElementById('f_benefits').value.trim(),
+    scope:document.getElementById('f_scope').value.trim(),constraints:document.getElementById('f_constraints').value.trim(),
+    success:document.getElementById('f_success').value.trim(),risks:rowsGet('#riskRows .riskrow'),
+    estimate:estRows,fin_front:document.getElementById('f_finfront').value.trim(),fin_back:document.getElementById('f_finback').value.trim(),
+    fin_credits:document.getElementById('f_fincredits').value.trim(),schedule:rowsGet('#schedRows .schedrow'),case:caseGet()};
   var body={name:document.getElementById('f_name').value.trim(),city:document.getElementById('f_city').value,
     otype:document.getElementById('f_type').value,sponsor:document.getElementById('f_sponsor').value.trim(),
-    est_investment:document.getElementById('f_inv').value?Number(document.getElementById('f_inv').value):null,
-    est_timeline:document.getElementById('f_time').value.trim(),objective:document.getElementById('f_obj').value.trim(),
-    strategic_link:document.getElementById('f_link').value.trim(),scores:collectScores()};
+    est_investment:estSum?estSum/1e6:null,
+    est_timeline:document.getElementById('f_time').value.trim(),objective:document.getElementById('f_intro').value.trim().slice(0,300),
+    strategic_link:document.getElementById('f_success').value.trim().slice(0,200),scores:collectScores(),assessment:assessment};
   if(!body.name){toast('Name required.');return;}
   var hasScores=Object.values(body.scores).some(function(v){return v>0});
   try{
@@ -234,6 +348,40 @@ async function saveOpp(){
     if(!r.ok)throw new Error((await r.json()).error||r.status);
     closeModal();load();toast('Charter saved.');
   }catch(e){toast('Save failed: '+e.message);}
+}
+function printAssessment(){
+  if(!editing)return;var o=editing;var a=o.assessment||{};
+  // collect live values so unsaved edits print too
+  var cs=caseGet();var risks=rowsGet('#riskRows .riskrow');var est=rowsGet('#estRows .estrow');var sched=rowsGet('#schedRows .schedrow');
+  function g(id){return document.getElementById(id).value.trim();}
+  var prof={};['best','probable','worst'].forEach(function(k){
+    prof[k]=((cs.ticketing&&cs.ticketing[k])||0)+((cs.sponsors&&cs.sponsors[k])||0)+((cs.other&&cs.other[k])||0)-((cs.cost&&cs.cost[k])||0);});
+  var estSum=est.reduce(function(t,e){return t+(Number(e.cost)||0)},0);
+  document.getElementById('assessPrint').innerHTML=
+   '<div style="display:flex;justify-content:space-between;border-bottom:2.5px solid #1E3A5F;padding-bottom:8px"><div>'
+   +'<h1>Opportunity Assessment — '+g('f_name')+'</h1>'
+   +'<p style="color:#64748B">Phase: Initiation · Category: '+document.getElementById('f_type').value+' · '+document.getElementById('f_city').value+' · '+new Date().toISOString().slice(0,10)+'</p></div>'
+   +'<div style="font-size:9px;font-weight:800;letter-spacing:1.3px;color:#8A5A00">CONFIDENTIAL</div></div>'
+   +'<table><tr><th>IP owner</th><td>'+(g('f_ip')||'—')+'</td><th>Opportunity owner</th><td>'+(g('f_sponsor')||'—')+'</td><th>Partner contact</th><td>'+(g('f_partner')||'—')+'</td></tr></table>'
+   +'<h4>1.0 INTRODUCTION — TRIGGER / PROBLEMATIC</h4><p>'+(g('f_intro')||'—')+'</p>'
+   +'<h4>2.0 POTENTIAL BENEFITS</h4><p>'+(g('f_benefits')||'—')+'</p>'
+   +'<h4>3.0 SCOPE — SCALE · DELIVERABLES · INTERRELATIONSHIPS · EXCLUSIONS</h4><p>'+(g('f_scope')||'—')+'</p>'
+   +'<h4>4.0 CONSTRAINTS</h4><p>'+(g('f_constraints')||'—')+'</p>'
+   +'<h4>5.0 CRITERIA FOR SUCCESS</h4><p>'+(g('f_success')||'—')+'</p>'
+   +'<h4>6.0 HIGH-LEVEL PLAN — RISKS & STRATEGY</h4>'
+   +'<table><tr><th>Risk</th><th>Level</th><th>Strategy</th></tr>'+risks.map(function(r){return '<tr><td>'+r.risk+'</td><td>'+r.level+'</td><td>'+r.strategy+'</td></tr>';}).join('')+'</table>'
+   +'<h4>PROJECT ESTIMATE — ORDER OF MAGNITUDE</h4>'
+   +'<table><tr><th>Topic</th><th>Cost</th><th>Remark</th></tr>'+est.map(function(e){return '<tr><td>'+e.topic+'</td><td>'+(Number(e.cost)||0).toLocaleString('en-US')+'</td><td>'+e.remark+'</td></tr>';}).join('')
+   +'<tr><th>Planned total</th><th>'+estSum.toLocaleString('en-US')+'</th><td></td></tr></table>'
+   +'<p style="margin-top:5px"><b>Financing</b> — Front end: '+(g('f_finfront')||'—')+' · Back end: '+(g('f_finback')||'—')+' · Credits: '+(g('f_fincredits')||'—')+'</p>'
+   +'<h4>DRAFT SCHEDULE (GUIDE)</h4>'
+   +'<table><tr><th>Activity</th><th>Target</th><th>Remark</th></tr>'+sched.map(function(x){return '<tr><td>'+x.activity+'</td><td>'+x.target+'</td><td>'+x.remark+'</td></tr>';}).join('')+'</table>'
+   +'<h4>8.0 CASE</h4>'
+   +'<table><tr><th></th><th>Best</th><th>Most probable</th><th>Worst</th><th>Assumptions</th></tr>'
+   +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};return '<tr><td>'+rw[1]+'</td><td>'+(v.best!=null?v.best.toLocaleString('en-US'):'—')+'</td><td>'+(v.probable!=null?v.probable.toLocaleString('en-US'):'—')+'</td><td>'+(v.worst!=null?v.worst.toLocaleString('en-US'):'—')+'</td><td>'+(v.assumptions||'')+'</td></tr>';}).join('')
+   +'<tr><th>Profit</th><th>'+prof.best.toLocaleString('en-US')+'</th><th>'+prof.probable.toLocaleString('en-US')+'</th><th>'+prof.worst.toLocaleString('en-US')+'</th><td></td></tr></table>'
+   +'<p style="margin-top:12px;font-size:9.5px;color:#8A98A8">Sun Group Entertainment (GSM) · CEO Toolbox — Decision Portfolio · Opportunity Assessment (Initiation) · Panda Projet Inc.</p>';
+  window.print();
 }
 async function setStatus(id,status){
   await fetch('/api/opportunities',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({id:id,status:status})});

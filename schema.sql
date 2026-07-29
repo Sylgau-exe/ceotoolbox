@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
   est_investment NUMERIC,                    -- US$M
   est_timeline VARCHAR(60),
   scores JSONB DEFAULT '{}',                 -- {strategic:0-5, market:0-5, financial:0-5, capability:0-5, risk:0-5}
+  assessment JSONB DEFAULT '{}',             -- full BD Opportunity Assessment (intro, benefits, scope, constraints, success, risks[], estimate[], financing, schedule[], case)
   status VARCHAR(20) DEFAULT 'proposed',     -- proposed | scored | go | parked | rejected
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
