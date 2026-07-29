@@ -36,7 +36,7 @@
   .lrow.approved .lname{color:var(--green)}
   .sect{font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel);margin:22px 0 2px;display:flex;align-items:center;gap:8px}
   .sect .n{background:#EDF2F8;border-radius:99px;padding:2px 9px;color:var(--navy)}
-  @media(max-width:900px){#sidebar{position:static}main>div{grid-template-columns:1fr!important}#pfCashGrid{grid-template-columns:1fr!important}}
+  @media(max-width:900px){#sidebar{position:static}main>div{grid-template-columns:1fr!important}#pfCashGrid{grid-template-columns:1fr!important}#ganttChart>div{grid-template-columns:1fr 1fr!important}}
   .card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:19px;display:flex;flex-direction:column;gap:8px}
   .chead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
   .oname{font-size:15.5px;font-weight:800;color:var(--navy);line-height:1.3}
@@ -126,7 +126,7 @@
         </div>
       </div>
       <div id="ganttPanel" style="display:none;background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:16px">
-        <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">SCHEDULE SCENARIO — HIGH-LEVEL GANTT · same toggles as the cash view
+        <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">PROJECT STATUS BOARD — WHERE EACH ITEM STANDS · same toggles as the cash view
           <a href="roadmap.html?m=pm" style="display:inline-block;margin-left:8px;font-size:9px;font-weight:800;letter-spacing:.7px;background:#FBF3E1;color:#8A5A00;border:1px solid #EAD9AE;border-radius:99px;padding:2px 9px;text-decoration:none;vertical-align:1px">DETAIL → PROJECT MANAGEMENT MODULE</a></div>
         <div id="ganttChart" style="margin-top:12px"></div>
       </div>
@@ -586,53 +586,65 @@ function renderGantt(){
   var items=OPPS.filter(function(o){return SCEN[o.id]});
   if(!items.length){panel.style.display='none';return;}
   panel.style.display='block';
-  var y0=new Date().getFullYear();
-  var W=760,rowH=34,PL=210,PR=16,PT=26;
-  var H=PT+items.length*rowH+26;
-  var X=function(m){return PL+(m/60)*(W-PL-PR);};   // 60-month axis
-  // phase model: pre-opening timeline split into 4 phases, then operation
   var PHASES=[
-    {key:'Initiation',    share:0.10, fill:'#C9D6E5', ink:'#1E3A5F'},
-    {key:'Planning',      share:0.20, fill:'#9BB3CC', ink:'#16304F'},
-    {key:'Pre-production',share:0.30, fill:'#5B7A9D', ink:'#fff'},
-    {key:'Production',    share:0.40, fill:'#1E3A5F', ink:'#fff'}
+    {key:'Initiation',    fill:'#C9D6E5'},
+    {key:'Planning',      fill:'#9BB3CC'},
+    {key:'Pre-production',fill:'#5B7A9D'},
+    {key:'Production',    fill:'#1E3A5F'},
+    {key:'Operation',     fill:'#2F7D52'}
   ];
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%">';
-  for(var yy=0;yy<=5;yy++){
-    svg+='<line x1="'+X(yy*12)+'" x2="'+X(yy*12)+'" y1="'+(PT-8)+'" y2="'+(H-18)+'" stroke="#EDF2F6"/>';
-    if(yy<5)svg+='<text x="'+X(yy*12+6)+'" y="'+(PT-12)+'" text-anchor="middle" font-size="9.5" fill="#8A98A8">'+(y0+yy)+'</text>';
-  }
-  items.forEach(function(o,i){
-    var f=oaCashFigures(o);
+  var SHARES=[0.10,0.20,0.30,0.40]; // pre-opening split
+  function itemStatus(o){
     var tl=o.est_timeline||'';var mM=tl.match(/\d+/);var months=mM?Number(mM[0]):12;if(/year/i.test(tl)&&mM)months=Number(mM[0])*12;
-    months=Math.min(Math.max(months,4),60);
-    var y=PT+i*rowH+6;
-    var approved=o.status==='go';
-    svg+='<text x="'+(PL-10)+'" y="'+(y+11)+'" text-anchor="end" font-size="10.5" font-weight="700" fill="'+(approved?'#2F7D52':'#1E3A5F')+'">'+(o.name.length>30?o.name.slice(0,28)+'…':o.name)+'</text>';
-    // phase segments (min 1 month each, remainder to Production)
-    var lens=PHASES.map(function(p){return Math.max(1,Math.round(months*p.share))});
-    var used=lens.reduce(function(a,b){return a+b},0);lens[3]+=months-used;
-    var cur=0;
-    PHASES.forEach(function(p,pi){
-      var w=X(cur+lens[pi])-X(cur);
-      svg+='<rect x="'+X(cur)+'" y="'+y+'" width="'+Math.max(w,3)+'" height="16" rx="3" fill="'+p.fill+'"><title>'+p.key+' · '+lens[pi]+'mo</title></rect>';
-      if(w>52)svg+='<text x="'+(X(cur)+4)+'" y="'+(y+12)+'" font-size="8" fill="'+p.ink+'" font-weight="700">'+p.key.toUpperCase().slice(0,7)+' '+lens[pi]+'mo</text>';
-      cur+=lens[pi];
-    });
-    // operation phase
-    if(months<60){
-      svg+='<rect x="'+X(months)+'" y="'+y+'" width="'+(X(60)-X(months))+'" height="16" rx="3" fill="'+(approved?'#E7F2EB':'#EDF2F8')+'" stroke="'+(approved?'#C4DECF':'#DBE5EF')+'"><title>Operation</title></rect>';
-      svg+='<text x="'+(X(months)+8)+'" y="'+(y+12)+'" font-size="8.5" fill="'+(approved?'#2F7D52':'#5B7A9D')+'" font-weight="700">OPERATION'+(f.net?' · US$'+f.net.toFixed(1)+'M/yr':'')+'</text>';
-      svg+='<circle cx="'+X(months)+'" cy="'+(y+8)+'" r="5" fill="#D9A441" stroke="#fff" stroke-width="1.6"/>';
+    months=Math.max(months,4);
+    var f=oaCashFigures(o);
+    if(o.status!=='go'){ // opportunities are, by definition, in Initiation
+      return{phase:0,months:months,elapsed:0,pct:0,cashSpent:0,cashPct:0,inv:f.inv,net:f.net,fict:false};
     }
+    // fictive elapsed for approved projects (deterministic, until PM module tracks actuals)
+    var share=(((o.id*7)%8)+1)/10; // 0.1 .. 0.8 through pre-opening
+    var elapsed=Math.round(months*share);
+    var pct=Math.round(share*100);
+    // phase from boundaries
+    var cum=0,phase=3;
+    for(var i=0;i<4;i++){cum+=SHARES[i];if(share<=cum){phase=i;break;}}
+    if(share>=1)phase=4;
+    // fictive cash consumed with slight deterministic variance (illustrative)
+    var vari=1+(((o.id%3)-1)*0.18);
+    var cashPct=Math.min(Math.round(pct*vari),100);
+    return{phase:phase,months:months,elapsed:elapsed,pct:pct,cashSpent:f.inv*cashPct/100,cashPct:cashPct,inv:f.inv,net:f.net,fict:true};
+  }
+  var anyFict=false;
+  var cols=PHASES.map(function(){return[]});
+  items.forEach(function(o){var st=itemStatus(o);if(st.fict)anyFict=true;cols[st.phase].push({o:o,st:st});});
+  var html='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">';
+  PHASES.forEach(function(p,pi){
+    html+='<div style="background:#F7F9FB;border:1px solid var(--line);border-radius:11px;padding:10px;min-height:120px">'
+     +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="width:10px;height:10px;border-radius:3px;background:'+p.fill+';display:inline-block"></span>'
+     +'<span style="font-size:9.5px;font-weight:800;letter-spacing:.7px;color:var(--steel)">'+p.key.toUpperCase()+'</span>'
+     +'<span style="margin-left:auto;font-size:9.5px;font-weight:800;color:#9AA8B8">'+cols[pi].length+'</span></div>';
+    cols[pi].forEach(function(e){
+      var o=e.o,st=e.st;
+      var hot=st.cashPct>st.pct+5, cold=st.cashPct<st.pct-5;
+      var chip = o.status!=='go' ? '<span style="font-size:9px;color:#8A98A8">not started — OA</span>'
+       : (st.phase===4 ? '<span style="font-size:9px;font-weight:700;color:var(--green)">opened · US$'+st.net.toFixed(1)+'M/yr</span>'
+       : '<span style="font-size:9px;font-weight:700;color:'+(hot?'var(--red)':(cold?'var(--green)':'var(--steel)'))+'">time '+st.pct+'% · cash '+st.cashPct+'%'+(hot?' ⚠':'')+'</span>');
+      html+='<div style="background:#fff;border:1px solid '+(o.status==='go'?'#C4DECF':'var(--line)')+';border-radius:9px;padding:9px 10px;margin-bottom:7px">'
+       +'<div style="font-size:11px;font-weight:800;color:'+(o.status==='go'?'var(--green)':'var(--navy)')+';line-height:1.3">'+o.name+'</div>'
+       +(o.status==='go'&&st.phase<4?'<div style="font-size:9.5px;color:var(--muted);margin-top:3px">month '+st.elapsed+' of '+st.months+'</div>'
+        +'<div style="height:5px;background:#EDF2F8;border-radius:99px;margin-top:5px;overflow:hidden"><div style="height:100%;width:'+st.pct+'%;background:'+p.fill+'"></div></div>'
+        +'<div style="font-size:9.5px;color:var(--muted);margin-top:4px">US$'+st.cashSpent.toFixed(1)+'M of US$'+st.inv.toFixed(1)+'M spent</div>':'')
+       +(o.status!=='go'?'<div style="font-size:9.5px;color:var(--muted);margin-top:3px">'+st.months+'-month plan · US$'+st.inv.toFixed(1)+'M</div>':'')
+       +'<div style="margin-top:4px">'+chip+'</div>'
+       +'</div>';
+    });
+    if(!cols[pi].length)html+='<div style="font-size:10px;color:#C2CCD8;text-align:center;padding:14px 0">—</div>';
+    html+='</div>';
   });
-  svg+='</svg>';
-  var legend=PHASES.map(function(p){return '<span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+p.fill+';vertical-align:-1px;margin-right:5px;border:1px solid #DBE5EF"></span>'+p.key+'</span>';}).join('')
-   +'<span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#E7F2EB;border:1px solid #C4DECF;vertical-align:-1px;margin-right:5px"></span>Operation</span>'
-   +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D9A441;vertical-align:-1px;margin-right:5px"></span>Opening night</span>';
-  document.getElementById('ganttChart').innerHTML=svg
-   +'<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:8px">'+legend+'</div>'
-   +'<div style="font-size:11px;color:#8A98A8;margin-top:6px;line-height:1.5">Phases split each item\'s pre-opening timeline (10 · 20 · 30 · 40%) — a planning default. Real per-project schedules, dependencies and vendor gates come from the <b>Project Management module</b>.</div>';
+  html+='</div>';
+  document.getElementById('ganttChart').innerHTML=html
+   +'<div style="font-size:11px;color:#8A98A8;margin-top:9px;line-height:1.5">Read left to right: opportunities wait in Initiation; approved projects advance through the phases to Operation. <b style="color:var(--red)">cash % ahead of time % ⚠</b> = burning faster than progressing.'
+   +(anyFict?' <b>Positions and spend are illustrative</b> — actuals come from the <b>Project Management module</b>.':'')+'</div>';
 }
 function renderPortfolioCash(){
   var panel=document.getElementById('pfCashPanel');if(!panel)return;
