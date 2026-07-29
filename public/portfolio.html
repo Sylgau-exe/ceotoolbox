@@ -23,7 +23,15 @@
   .tabs{display:flex;gap:8px;margin-top:20px}
   .tab{border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted)}
   .tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:12px}
+  .lrow{display:grid;grid-template-columns:minmax(220px,2.2fr) .9fr 1.4fr 1.2fr .9fr auto;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 16px;margin-top:8px}
+  @media(max-width:1000px){.lrow{grid-template-columns:1fr 1fr;row-gap:8px}}
+  .lname{font-size:14px;font-weight:800;color:var(--navy);line-height:1.3}
+  .lmeta{font-size:11px;color:var(--muted);margin-top:2px}
+  .llab{font-size:9px;font-weight:800;letter-spacing:.6px;color:#9AA8B8;display:block}
+  .lval{font-size:12.5px;color:var(--ink);font-weight:600}
+  .lact{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .lact .btn{padding:6px 10px;font-size:11.5px}
+  .sectdiv{border-top:3px solid var(--navy);margin-top:26px}
   .sect{font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel);margin:22px 0 2px;display:flex;align-items:center;gap:8px}
   .sect .n{background:#EDF2F8;border-radius:99px;padding:2px 9px;color:var(--navy)}
   @media(max-width:900px){#sidebar{position:static}main>div{grid-template-columns:1fr!important}}
@@ -94,15 +102,9 @@
     <button class="btn" id="newBtn" onclick="openNew()">＋ New assessment</button>
   </div>
 
-  <div class="tabs">
-    <button class="tab on" id="tabCards" onclick="setView('cards')">Assessments</button>
-    <button class="tab" id="tabRank" onclick="setView('rank')">Ranking</button>
-  </div>
-
   <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;margin-top:4px">
     <div>
-      <div id="cardsView"></div>
-      <div id="rankView" style="display:none"></div>
+      <div id="listView"></div>
       <div class="empty" id="empty">No assessments yet — document the first opportunity.</div>
       <div class="weights" id="weightsBox">
         <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-bottom:4px">SCORING WEIGHTS — one set of rules for every opportunity (portfolio review)</div>
@@ -243,14 +245,12 @@ function setRole(r){
   document.getElementById('roleGate').style.display='none';
   document.getElementById('roleLink').textContent=r==='bd'?'Role: BD leader (switch)':'Role: Portfolio leader (switch)';
   // BD: no ranking tab, no sidebar, no weights
-  document.getElementById('tabRank').style.display=r==='pm'?'inline-block':'none';
   document.getElementById('sidebar').style.display=r==='pm'?'block':'none';
   document.getElementById('weightsBox').style.display=r==='pm'?'block':'none';
   document.getElementById('newBtn').style.display=r==='bd'?'inline-block':'none';
   document.getElementById('pageSub').textContent=r==='bd'
     ?'Document a new opportunity as an Opportunity Assessment, run its viability check in the Business Model, and it enters the portfolio for review.'
     :'Approved projects hold their funds; open assessments wait below the line. Score with the team — scored OAs climb. The envelope tells you what you can afford.';
-  if(r==='bd'&&view==='rank')setView('cards');
   renderAll();
 }
 function switchRole(){document.getElementById('roleGate').style.display='flex';}
@@ -303,27 +303,27 @@ async function delFund(y){await fetch('/api/funds?year='+y,{method:'DELETE',head
 async function addFundYear(){var y=prompt('Year:',String(new Date().getFullYear()+1));if(!y)return;await saveFund(Number(y),0);}
 
 function viabChip(o){
-  if(!o.viability||!o.viability.outputs)return '<span style="font-size:10px;color:#8A98A8">no viability check yet</span>';
+  if(!o.viability||!o.viability.outputs)return '<span style="font-size:10.5px;color:#8A98A8">—</span>';
   var v=o.viability.outputs;
-  return '<span style="font-size:10px;font-weight:700;background:#E7F2EB;color:var(--green);border-radius:5px;padding:2px 7px">✓ VIABILITY — rev US$'+(v.revenueUSD/1e6).toFixed(1)+'M · max inv US$'+(v.maxInvestmentUSD/1e6).toFixed(1)+'M</span> <span style="font-size:9.5px;color:#8A98A8">'+(o.viability.date||'')+'</span>';
+  return '<span style="font-size:10px;font-weight:700;color:var(--green)">✓ rev US$'+(v.revenueUSD/1e6).toFixed(1)+'M · inv ≤ US$'+(v.maxInvestmentUSD/1e6).toFixed(1)+'M</span>';
 }
-function oppCard(o,isOA){
+function oppRow(o,isOA){
   var pct=scoreOf(o);
-  return '<div class="card"><div class="chead"><div><div class="oname">'+o.name+'</div>'
-   +'<div class="ocity">📍 '+o.city+' · <span class="typechip">'+(o.otype||'').replace('-',' ').toUpperCase()+'</span>'+(o.sponsor?' · '+o.sponsor:'')+'</div></div>'
-   +'<span class="status s-'+o.status+'">'+(STATUS_LBL[o.status]||o.status)+'</span></div>'
-   +(o.objective?'<div class="odesc">'+o.objective+'</div>':'<div class="odesc"></div>')
-   +'<div class="ofacts">'+(o.est_investment!=null?('<span>💰 ~US$'+Number(o.est_investment).toFixed(1)+'M</span>'):'')
-   +(o.est_timeline?('<span>⏱ '+o.est_timeline+'</span>'):'')+'<span>'+viabChip(o)+'</span></div>'
-   +bar(pct)
-   +'<div class="rowb"><button class="btn ghost" onclick=\'openEdit('+o.id+')\'>Open assessment</button>'
-   +(isOA?'<button class="btn ghost" onclick="runViability('+o.id+')">Viability check →</button>':'')
-   +(ROLE==='pm'&&isOA?'<button class="btn" style="background:var(--steel)" onclick="openScore('+o.id+')">Score (review)</button>':'')
-   +(ROLE==='pm'&&isOA&&pct!=null?'<button class="btn green" onclick="gateGo('+o.id+')">GO → project</button>':'')
-   +(ROLE==='pm'&&o.status==='go'?'<button class="btn ghost" onclick="location.href=\'model.html\'">Open model →</button>':'')
-   +(ROLE==='pm'&&isOA&&o.status!=='parked'?'<button class="btn ghost" onclick="setStatus('+o.id+',\'parked\')">Park</button>':'')
-   +(ROLE==='pm'&&o.status==='parked'?'<button class="btn ghost" onclick="setStatus('+o.id+',\'proposed\')">Unpark</button>':'')
-   +'</div></div>';
+  var acts='<button class="btn ghost" onclick=\'openEdit('+o.id+')\'>Open</button>';
+  if(isOA)acts+='<button class="btn ghost" onclick="runViability('+o.id+')">Viability</button>';
+  if(ROLE==='pm'&&isOA)acts+='<button class="btn" style="background:var(--steel)" onclick="openScore('+o.id+')">Score</button>';
+  if(ROLE==='pm'&&isOA&&pct!=null)acts+='<button class="btn green" onclick="gateGo('+o.id+')">GO</button>';
+  if(ROLE==='pm'&&o.status==='go')acts+='<button class="btn ghost" onclick="location.href=\'model.html\'">Model →</button>';
+  if(ROLE==='pm'&&isOA&&o.status!=='parked')acts+='<button class="btn ghost" onclick="setStatus('+o.id+',\'parked\')">Park</button>';
+  if(ROLE==='pm'&&o.status==='parked')acts+='<button class="btn ghost" onclick="setStatus('+o.id+',\'proposed\')">Unpark</button>';
+  return '<div class="lrow">'
+   +'<div><div class="lname">'+o.name+'</div><div class="lmeta">📍 '+o.city+' · '+(o.otype||'').replace('-',' ')+(o.sponsor?' · '+o.sponsor:'')+(o.est_timeline?' · ⏱ '+o.est_timeline:'')+'</div></div>'
+   +'<div><span class="llab">EST. INV</span><span class="lval">'+(o.est_investment!=null?('US$'+Number(o.est_investment).toFixed(1)+'M'):'—')+'</span></div>'
+   +'<div><span class="llab">VIABILITY</span>'+viabChip(o)+'</div>'
+   +'<div><span class="llab">SCORE</span>'+bar(pct)+'</div>'
+   +'<div><span class="status s-'+o.status+'">'+(STATUS_LBL[o.status]||o.status)+'</span></div>'
+   +'<div class="lact">'+acts+'</div>'
+   +'</div>';
 }
 function renderAll(){
   if(!ROLE)return;
@@ -337,177 +337,15 @@ function renderAll(){
     if(b.status==='parked'&&a.status!=='parked')return -1;
     return (pb!=null?pb:-1)-(pa!=null?pa:-1);
   });
-  // cards
-  var oaBlock='<div class="sect">'+(ROLE==='bd'?'OPPORTUNITY ASSESSMENTS':'OPPORTUNITY ASSESSMENTS — SCORED CLIMB, UNSCORED WAIT')+' <span class="n">'+oas.length+'</span></div>'
-   +(oas.length?('<div class="grid">'+oaSorted.map(function(o){return oppCard(o,true)}).join('')+'</div>'):'<div style="font-size:12.5px;color:#8A98A8;margin-top:8px">No open assessments'+(ROLE==='bd'?' — enter the first one.':'.')+'</div>');
-  document.getElementById('cardsView').innerHTML = ROLE==='bd' ? oaBlock :
-   '<div class="sect">IN PROGRESS — APPROVED PROJECTS <span class="n">'+inProg.length+'</span></div>'
-   +(inProg.length?('<div class="grid">'+inProg.map(function(o){return oppCard(o,false)}).join('')+'</div>'):'<div style="font-size:12.5px;color:#8A98A8;margin-top:8px">Nothing in progress yet.</div>')
-   +'<div style="border-top:2.5px solid var(--navy);margin-top:22px"></div>'
+  var oaBlock='<div class="sect">OPPORTUNITY ASSESSMENTS'+(ROLE==='pm'?' — SCORED CLIMB, UNSCORED WAIT':'')+' <span class="n">'+oas.length+'</span></div>'
+   +(oas.length?oaSorted.map(function(o){return oppRow(o,true)}).join(''):'<div style="font-size:12.5px;color:#8A98A8;margin-top:8px">No open assessments'+(ROLE==='bd'?' — enter the first one.':'.')+'</div>');
+  document.getElementById('listView').innerHTML = ROLE==='bd' ? oaBlock :
+   '<div class="sect">APPROVED — IN PROGRESS <span class="n">'+inProg.length+'</span></div>'
+   +(inProg.length?inProg.map(function(o){return oppRow(o,false)}).join(''):'<div style="font-size:12.5px;color:#8A98A8;margin-top:8px">Nothing approved yet.</div>')
+   +'<div class="sectdiv"></div>'
    +oaBlock;
-  // ranking table: in progress pinned, then scored OAs, then unscored
-  var ranked=inProg.map(function(o){return{o:o,pct:scoreOf(o),pin:true}})
-    .concat(oaSorted.map(function(o){return{o:o,pct:scoreOf(o),pin:false}}));
-  var rk=0;
-  document.getElementById('rankView').innerHTML='<table><tr><th></th><th>OPPORTUNITY</th><th>CITY</th><th>SCORE</th><th>EST. INV</th><th>VIABILITY</th><th>STATUS</th></tr>'
-   +ranked.map(function(r){
-     var lab=r.pin?'▶':(r.pct!=null?('#'+(++rk)):'—');
-     return '<tr'+(r.pin?' style="background:#F6F9FC"':'')+'><td class="rank">'+lab+'</td>'
-      +'<td><b>'+r.o.name+'</b><div style="font-size:11px;color:var(--muted)">'+(r.o.strategic_link||'')+'</div></td>'
-      +'<td>'+r.o.city+'</td><td style="min-width:150px">'+bar(r.pct)+'</td>'
-      +'<td>'+(r.o.est_investment!=null?('US$'+Number(r.o.est_investment).toFixed(1)+'M'):'—')+'</td>'
-      +'<td>'+(r.o.viability?'✓':'—')+'</td>'
-      +'<td><span class="status s-'+r.o.status+'">'+(STATUS_LBL[r.o.status]||r.o.status)+'</span></td></tr>';
-   }).join('')+'</table>'
-   +'<div style="font-size:11px;color:#8A98A8;margin-top:10px">▶ In-progress projects hold their committed funds. New OAs enter unscored at the bottom; the portfolio review scores them and they climb.</div>';
 }
-// ---- dynamic assessment rows ----
-function riskRow(r){r=r||{};return '<div style="display:grid;grid-template-columns:1.2fr .6fr 1.6fr 24px;gap:6px;margin:5px 0" class="riskrow">'
- +'<input placeholder="Risk (e.g. Creative)" value="'+(r.risk||'')+'" data-f="risk">'
- +'<select data-f="level"><option'+(r.level==='low'?' selected':'')+'>low</option><option'+(r.level==='medium'?' selected':'')+'>medium</option><option'+(r.level==='high'?' selected':'')+'>high</option></select>'
- +'<input placeholder="Strategy (e.g. proven creative team)" value="'+(r.strategy||'')+'" data-f="strategy">'
- +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove()">×</a></div>';}
-function addRisk(r){document.getElementById('riskRows').insertAdjacentHTML('beforeend',riskRow(r));}
-function estRow(e){e=e||{};return '<div style="display:grid;grid-template-columns:1.6fr .6fr 1.6fr 24px;gap:6px;margin:5px 0" class="estrow">'
- +'<input placeholder="Topic (e.g. Production)" value="'+(e.topic||'')+'" data-f="topic">'
- +'<input type="number" step="1000" placeholder="$" value="'+(e.cost!=null?e.cost:'')+'" data-f="cost" onchange="estTotal()">'
- +'<input placeholder="Remark (front/back end, contingency…)" value="'+(e.remark||'')+'" data-f="remark">'
- +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove();estTotal()">×</a></div>';}
-function addEst(e){document.getElementById('estRows').insertAdjacentHTML('beforeend',estRow(e));estTotal();}
-function estTotal(){var t=0;document.querySelectorAll('#estRows [data-f=cost]').forEach(function(i){t+=Number(i.value)||0});
- document.getElementById('estTotal').textContent=t?('Planned total: '+t.toLocaleString('en-US')):'';}
-function schedRow(x){x=x||{};return '<div style="display:grid;grid-template-columns:1.6fr .8fr 1.6fr 24px;gap:6px;margin:5px 0" class="schedrow">'
- +'<input placeholder="Activity (e.g. Secure rights)" value="'+(x.activity||'')+'" data-f="activity">'
- +'<input placeholder="Target" value="'+(x.target||'')+'" data-f="target">'
- +'<input placeholder="Remark" value="'+(x.remark||'')+'" data-f="remark">'
- +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove()">×</a></div>';}
-function addSched(x){document.getElementById('schedRows').insertAdjacentHTML('beforeend',schedRow(x));}
-var CASE_ROWS=[['ticketing','Revenue — ticketing'],['sponsors','Revenue — sponsors'],['other','Revenue — other'],['cost','Total cost']];
-function renderCase(cs){cs=cs||{};
- var t=document.getElementById('caseTable');
- t.innerHTML='<tr><th></th><th>BEST</th><th>MOST PROBABLE</th><th>WORST</th><th>ASSUMPTIONS</th></tr>'
-  +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};
-   return '<tr data-row="'+rw[0]+'"><td style="font-weight:700;font-size:12px">'+rw[1]+'</td>'
-    +['best','probable','worst'].map(function(k){return '<td><input type="number" style="width:92px;padding:5px" value="'+(v[k]!=null?v[k]:'')+'" data-k="'+k+'" onchange="caseProfit()"></td>';}).join('')
-    +'<td><input style="width:100%;min-width:120px;padding:5px" value="'+(v.assumptions||'')+'" data-k="assumptions"></td></tr>';}).join('')
-  +'<tr id="profitRow"><td style="font-weight:800;color:var(--navy)">Profit</td><td></td><td></td><td></td><td style="font-size:11px;color:var(--muted)">computed</td></tr>';
- caseProfit();
-}
-function caseGet(){var cs={};document.querySelectorAll('#caseTable tr[data-row]').forEach(function(tr){
-  var o={};tr.querySelectorAll('input').forEach(function(i){o[i.dataset.k]=i.dataset.k==='assumptions'?i.value:(i.value===''?null:Number(i.value));});
-  cs[tr.dataset.row]=o;});return cs;}
-function caseProfit(){var cs=caseGet();var cells=document.querySelectorAll('#profitRow td');
- ['best','probable','worst'].forEach(function(k,i){
-  var rev=(cs.ticketing&&cs.ticketing[k]||0)+(cs.sponsors&&cs.sponsors[k]||0)+(cs.other&&cs.other[k]||0);
-  var cost=cs.cost&&cs.cost[k]||0;var p=rev-cost;
-  cells[i+1].innerHTML='<b style="color:'+(p>=0?'var(--green)':'var(--red)')+'">'+(rev||cost?p.toLocaleString('en-US'):'—')+'</b>';});}
-function rowsGet(sel){var out=[];document.querySelectorAll(sel).forEach(function(row){
-  var o={};row.querySelectorAll('[data-f]').forEach(function(i){o[i.dataset.f]=i.value;});
-  if(Object.values(o).some(function(v){return v&&String(v).trim()}))out.push(o);});return out;}
 
-function critInputs(scores){
-  return CRITERIA.map(function(c,i){
-    var v=scores&&scores[c.key]!=null?scores[c.key]:'';
-    return '<div class="crit"><label>'+c.label+'</label><input type="range" min="0" max="5" step="1" value="'+(v===''?0:v)+'" oninput="this.nextElementSibling.textContent=this.value" data-k="'+c.key+'"><b>'+(v===''?0:v)+'</b></div>';
-  }).join('');
-}
-function openNew(){editing=null;document.getElementById('mtitle').textContent='New Opportunity Assessment';document.getElementById('saveBtn').textContent='Create';
-  document.getElementById('printAssessBtn').style.display='none';
-  document.getElementById('viabBtn').style.display='none';
-  ['f_name','f_ip','f_sponsor','f_partner','f_intro','f_benefits','f_scope','f_constraints','f_success','f_finfront','f_finback','f_fincredits','f_time'].forEach(function(i){document.getElementById(i).value=''});
-  document.getElementById('riskRows').innerHTML='';['Creative','Production','Profitability'].forEach(function(r){addRisk({risk:r,level:'low'})});
-  document.getElementById('estRows').innerHTML='';addEst();addEst();
-  document.getElementById('schedRows').innerHTML='';addSched();addSched();
-  renderCase(null);
-  document.getElementById('modal').style.display='flex';}
-function openEdit(id){
-  var o=OPPS.find(function(x){return x.id===id});if(!o)return;
-  editing=o;var a=o.assessment||{};
-  document.getElementById('mtitle').textContent='Opportunity Assessment — '+o.name;document.getElementById('saveBtn').textContent='Save';
-  document.getElementById('printAssessBtn').style.display='inline-block';
-  document.getElementById('viabBtn').style.display='inline-block';
-  document.getElementById('f_name').value=o.name;document.getElementById('f_city').value=o.city;
-  document.getElementById('f_type').value=o.otype||'new-show';document.getElementById('f_sponsor').value=o.sponsor||'';
-  document.getElementById('f_ip').value=a.ip_owner||'';document.getElementById('f_partner').value=a.partner_contact||'';
-  document.getElementById('f_intro').value=a.intro||o.objective||'';document.getElementById('f_benefits').value=a.benefits||'';
-  document.getElementById('f_scope').value=a.scope||'';document.getElementById('f_constraints').value=a.constraints||'';
-  document.getElementById('f_success').value=a.success||o.strategic_link||'';
-  document.getElementById('f_finfront').value=a.fin_front||'';document.getElementById('f_finback').value=a.fin_back||'';
-  document.getElementById('f_fincredits').value=a.fin_credits||'';document.getElementById('f_time').value=o.est_timeline||'';
-  document.getElementById('riskRows').innerHTML='';(a.risks&&a.risks.length?a.risks:[{risk:'Creative',level:'low'},{risk:'Production',level:'low'},{risk:'Profitability',level:'low'}]).forEach(addRisk);
-  document.getElementById('estRows').innerHTML='';(a.estimate&&a.estimate.length?a.estimate:[{},{}]).forEach(function(e){addEst(e)});
-  document.getElementById('schedRows').innerHTML='';(a.schedule&&a.schedule.length?a.schedule:[{},{}]).forEach(addSched);
-  renderCase(a.case);
-  document.getElementById('modal').style.display='flex';}
-function closeModal(){document.getElementById('modal').style.display='none';}
-
-function viabFromModal(){if(editing)runViability(editing.id);}
-async function saveOpp(goViability){
-  var estRows=rowsGet('#estRows .estrow');
-  var estSum=estRows.reduce(function(t,e){return t+(Number(e.cost)||0)},0);
-  var assessment={ip_owner:document.getElementById('f_ip').value.trim(),partner_contact:document.getElementById('f_partner').value.trim(),
-    phase:'Initiation',intro:document.getElementById('f_intro').value.trim(),benefits:document.getElementById('f_benefits').value.trim(),
-    scope:document.getElementById('f_scope').value.trim(),constraints:document.getElementById('f_constraints').value.trim(),
-    success:document.getElementById('f_success').value.trim(),risks:rowsGet('#riskRows .riskrow'),
-    estimate:estRows,fin_front:document.getElementById('f_finfront').value.trim(),fin_back:document.getElementById('f_finback').value.trim(),
-    fin_credits:document.getElementById('f_fincredits').value.trim(),schedule:rowsGet('#schedRows .schedrow'),case:caseGet()};
-  var body={name:document.getElementById('f_name').value.trim(),city:document.getElementById('f_city').value,
-    otype:document.getElementById('f_type').value,sponsor:document.getElementById('f_sponsor').value.trim(),
-    est_investment:estSum?estSum/1e6:null,
-    est_timeline:document.getElementById('f_time').value.trim(),objective:document.getElementById('f_intro').value.trim().slice(0,300),
-    strategic_link:document.getElementById('f_success').value.trim().slice(0,200),assessment:assessment};
-  if(!body.name){toast('Name required.');return;}
-  try{
-    var method='POST';if(editing){body.id=editing.id;method='PATCH';}
-    var r=await fetch('/api/opportunities',{method:method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)});
-    var data=await r.json();
-    if(!r.ok)throw new Error(data.error||r.status);
-    var oid=editing?editing.id:(data.opportunity&&data.opportunity.id);
-    closeModal();
-    if(goViability&&oid){
-      var c=body.city==='Vietnam'?'Ho Chi Minh City':body.city;
-      location.href='model.html?city='+encodeURIComponent(c)+'&opp='+oid+'&oname='+encodeURIComponent(body.name);
-      return;
-    }
-    load();toast('Assessment saved.');
-  }catch(e){toast('Save failed: '+e.message);}
-}
-function printAssessment(){
-  if(!editing)return;var o=editing;var a=o.assessment||{};
-  // collect live values so unsaved edits print too
-  var cs=caseGet();var risks=rowsGet('#riskRows .riskrow');var est=rowsGet('#estRows .estrow');var sched=rowsGet('#schedRows .schedrow');
-  function g(id){return document.getElementById(id).value.trim();}
-  var prof={};['best','probable','worst'].forEach(function(k){
-    prof[k]=((cs.ticketing&&cs.ticketing[k])||0)+((cs.sponsors&&cs.sponsors[k])||0)+((cs.other&&cs.other[k])||0)-((cs.cost&&cs.cost[k])||0);});
-  var estSum=est.reduce(function(t,e){return t+(Number(e.cost)||0)},0);
-  document.getElementById('assessPrint').innerHTML=
-   '<div style="display:flex;justify-content:space-between;border-bottom:2.5px solid #1E3A5F;padding-bottom:8px"><div>'
-   +'<h1>Opportunity Assessment — '+g('f_name')+'</h1>'
-   +'<p style="color:#64748B">Phase: Initiation · Category: '+document.getElementById('f_type').value+' · '+document.getElementById('f_city').value+' · '+new Date().toISOString().slice(0,10)+'</p></div>'
-   +'<div style="font-size:9px;font-weight:800;letter-spacing:1.3px;color:#8A5A00">CONFIDENTIAL</div></div>'
-   +'<table><tr><th>IP owner</th><td>'+(g('f_ip')||'—')+'</td><th>Opportunity owner</th><td>'+(g('f_sponsor')||'—')+'</td><th>Partner contact</th><td>'+(g('f_partner')||'—')+'</td></tr></table>'
-   +'<h4>1.0 INTRODUCTION — TRIGGER / PROBLEMATIC</h4><p>'+(g('f_intro')||'—')+'</p>'
-   +'<h4>2.0 POTENTIAL BENEFITS</h4><p>'+(g('f_benefits')||'—')+'</p>'
-   +'<h4>3.0 SCOPE — SCALE · DELIVERABLES · INTERRELATIONSHIPS · EXCLUSIONS</h4><p>'+(g('f_scope')||'—')+'</p>'
-   +'<h4>4.0 CONSTRAINTS</h4><p>'+(g('f_constraints')||'—')+'</p>'
-   +'<h4>5.0 CRITERIA FOR SUCCESS</h4><p>'+(g('f_success')||'—')+'</p>'
-   +'<h4>6.0 HIGH-LEVEL PLAN — RISKS & STRATEGY</h4>'
-   +'<table><tr><th>Risk</th><th>Level</th><th>Strategy</th></tr>'+risks.map(function(r){return '<tr><td>'+r.risk+'</td><td>'+r.level+'</td><td>'+r.strategy+'</td></tr>';}).join('')+'</table>'
-   +'<h4>PROJECT ESTIMATE — ORDER OF MAGNITUDE</h4>'
-   +'<table><tr><th>Topic</th><th>Cost</th><th>Remark</th></tr>'+est.map(function(e){return '<tr><td>'+e.topic+'</td><td>'+(Number(e.cost)||0).toLocaleString('en-US')+'</td><td>'+e.remark+'</td></tr>';}).join('')
-   +'<tr><th>Planned total</th><th>'+estSum.toLocaleString('en-US')+'</th><td></td></tr></table>'
-   +'<p style="margin-top:5px"><b>Financing</b> — Front end: '+(g('f_finfront')||'—')+' · Back end: '+(g('f_finback')||'—')+' · Credits: '+(g('f_fincredits')||'—')+'</p>'
-   +'<h4>DRAFT SCHEDULE (GUIDE)</h4>'
-   +'<table><tr><th>Activity</th><th>Target</th><th>Remark</th></tr>'+sched.map(function(x){return '<tr><td>'+x.activity+'</td><td>'+x.target+'</td><td>'+x.remark+'</td></tr>';}).join('')+'</table>'
-   +(o.viability&&o.viability.outputs?('<h4>VIABILITY CHECK — BUSINESS MODEL ('+(o.viability.city||'')+', '+(o.viability.date||'')+')</h4>'
-   +'<p>Revenue US$'+(o.viability.outputs.revenueUSD/1e6).toFixed(1)+'M/yr · Opex ceiling US$'+(o.viability.outputs.opexCeilingUSD/1e6).toFixed(1)+'M/yr · <b>Max production investment US$'+(o.viability.outputs.maxInvestmentUSD/1e6).toFixed(1)+'M</b> · '+o.viability.inputs.seats.toLocaleString('en-US')+' seats · '+o.viability.inputs.shows+' shows/yr · '+(o.viability.inputs.occupancy*100).toFixed(0)+'% occupancy</p>'):'')
-   +'<h4>8.0 CASE</h4>'
-   +'<table><tr><th></th><th>Best</th><th>Most probable</th><th>Worst</th><th>Assumptions</th></tr>'
-   +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};return '<tr><td>'+rw[1]+'</td><td>'+(v.best!=null?v.best.toLocaleString('en-US'):'—')+'</td><td>'+(v.probable!=null?v.probable.toLocaleString('en-US'):'—')+'</td><td>'+(v.worst!=null?v.worst.toLocaleString('en-US'):'—')+'</td><td>'+(v.assumptions||'')+'</td></tr>';}).join('')
-   +'<tr><th>Profit</th><th>'+prof.best.toLocaleString('en-US')+'</th><th>'+prof.probable.toLocaleString('en-US')+'</th><th>'+prof.worst.toLocaleString('en-US')+'</th><td></td></tr></table>'
-   +'<p style="margin-top:12px;font-size:9.5px;color:#8A98A8">Sun Group Entertainment (GSM) · CEO Toolbox — Decision Portfolio · Opportunity Assessment (Initiation) · Panda Projet Inc.</p>';
-  window.print();
-}
 function runViability(id){
   var o=OPPS.find(function(x){return x.id===id});if(!o)return;
   var c=o.city==='Vietnam'?'Ho Chi Minh City':o.city;
