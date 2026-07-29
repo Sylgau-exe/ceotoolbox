@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       return res.status(201).json({ opportunity: result.rows[0] });
     }
     if (req.method === 'PATCH') {
-      const { id, name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores, status, assessment } = req.body || {};
+      const { id, name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores, status, assessment, viability } = req.body || {};
       if (!id) return res.status(400).json({ error: 'id required' });
       const result = await sql`
         UPDATE opportunities SET
@@ -40,6 +40,7 @@ export default async function handler(req, res) {
           est_investment = COALESCE(${est_investment}, est_investment), est_timeline = COALESCE(${est_timeline}, est_timeline),
           scores = COALESCE(${scores ? JSON.stringify(scores) : null}, scores),
           assessment = COALESCE(${assessment ? JSON.stringify(assessment) : null}, assessment),
+          viability = COALESCE(${viability ? JSON.stringify(viability) : null}, viability),
           status = COALESCE(${status}, status), updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id} RETURNING *`;
       return res.status(200).json({ opportunity: result.rows[0] });

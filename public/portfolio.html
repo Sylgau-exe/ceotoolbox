@@ -12,7 +12,7 @@
   .wordmark{font-weight:800;font-size:18px;cursor:pointer}.wordmark span{color:var(--amber)}
   .hsub{font-size:11.5px;color:#B9C7D8;margin-left:12px;padding-left:12px;border-left:1px solid #3D577A}
   .hright a{color:#C9D6E5;text-decoration:none;font-size:13px;margin-left:16px}.hright a:hover{color:#fff}
-  main{max-width:1180px;margin:0 auto;padding:30px 28px 70px}
+  main{max-width:1280px;margin:0 auto;padding:30px 28px 70px}
   h1{font-size:22px;color:var(--navy)}
   .sub{color:var(--muted);font-size:13.5px;margin-top:4px;max-width:640px}
   .btn{background:var(--navy);color:#fff;border:0;border-radius:9px;padding:10px 17px;font-size:13.5px;font-weight:700;cursor:pointer}
@@ -23,7 +23,10 @@
   .tabs{display:flex;gap:8px;margin-top:20px}
   .tab{border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted)}
   .tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-top:20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:12px}
+  .sect{font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel);margin:22px 0 2px;display:flex;align-items:center;gap:8px}
+  .sect .n{background:#EDF2F8;border-radius:99px;padding:2px 9px;color:var(--navy)}
+  @media(max-width:900px){#sidebar{position:static}main>div{grid-template-columns:1fr!important}}
   .card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:19px;display:flex;flex-direction:column;gap:8px}
   .chead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
   .oname{font-size:15.5px;font-weight:800;color:var(--navy);line-height:1.3}
@@ -94,13 +97,27 @@
     <button class="tab" id="tabRank" onclick="setView('rank')">Ranking</button>
   </div>
 
-  <div id="cardsView" class="grid"></div>
-  <div id="rankView" style="display:none"></div>
-  <div class="empty" id="empty">No assessments yet — document the first opportunity.</div>
-
-  <div class="weights" id="weightsBox" style="max-width:560px">
-    <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-bottom:4px">SCORING WEIGHTS — one set of rules for every opportunity</div>
-    <div id="weightRows"></div>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;margin-top:4px">
+    <div>
+      <div id="cardsView"></div>
+      <div id="rankView" style="display:none"></div>
+      <div class="empty" id="empty">No assessments yet — document the first opportunity.</div>
+      <div class="weights" id="weightsBox">
+        <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-bottom:4px">SCORING WEIGHTS — one set of rules for every opportunity (portfolio review)</div>
+        <div id="weightRows"></div>
+      </div>
+    </div>
+    <div id="sidebar" style="position:sticky;top:80px">
+      <div style="background:var(--navy);border-radius:13px;padding:18px;color:#fff">
+        <div style="font-size:10px;font-weight:800;letter-spacing:1.1px;color:#B9C7D8">INVESTMENT ENVELOPE</div>
+        <div id="fundsSummary"></div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:13px;padding:16px;margin-top:12px">
+        <div style="font-size:10px;font-weight:800;letter-spacing:1.1px;color:var(--steel);margin-bottom:8px">FUNDS BY YEAR (US$M)</div>
+        <div id="fundsRows"></div>
+        <a style="font-size:11.5px;color:var(--steel);cursor:pointer;font-weight:700" onclick="addFundYear()">＋ add year</a>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -157,12 +174,20 @@
       <tr><th></th><th>BEST</th><th>MOST PROBABLE</th><th>WORST</th><th>ASSUMPTIONS</th></tr>
     </table></div>
 
-    <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:4px">SCORING (0 = weak · 5 = strong)</div>
-    <div id="critRows"></div>
-
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
       <button class="btn" id="saveBtn" onclick="saveOpp()">Create</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="scoreModal">
+  <div class="mbox" style="max-width:460px">
+    <h3 id="scoreTitle">Portfolio review</h3>
+    <div style="font-size:11.5px;color:var(--muted)">Scored with the team against the shared weights — the OA climbs the portfolio accordingly.</div>
+    <div id="scoreRows" style="margin-top:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn ghost" onclick="document.getElementById('scoreModal').style.display='none'">Cancel</button>
+      <button class="btn" onclick="saveScore()">Save scores</button>
     </div>
   </div>
 </div>
@@ -186,8 +211,8 @@ var CRITERIA=[
   {key:'risk',      label:'Risk profile (5 = low risk)', w:15}
 ];
 try{var savedW=JSON.parse(localStorage.getItem('pf_weights')||'null');if(savedW)CRITERIA.forEach(function(c){if(savedW[c.key]!=null)c.w=savedW[c.key];});}catch(e){}
-var OPPS=[],view='cards',editing=null;
-var STATUS_LBL={proposed:'PROPOSED',scored:'SCORED','go':'GATE 0 — GO',parked:'PARKED',rejected:'REJECTED'};
+var OPPS=[],FUNDS=[],view='cards',editing=null;
+var STATUS_LBL={proposed:'OA — UNSCORED',scored:'OA — SCORED','go':'IN PROGRESS',parked:'PARKED',rejected:'REJECTED'};
 
 function wsum(){return CRITERIA.reduce(function(a,c){return a+c.w},0)||1;}
 function scoreOf(o){
@@ -211,82 +236,86 @@ function setView(v){view=v;
 }
 function bar(pct){return '<div class="scoreline"><div class="scorebar" style="flex:1"><div style="width:'+(pct||0)+'%"></div></div><b>'+(pct!=null?Math.round(pct):'—')+'</b></div>';}
 
+function committedTotal(){return OPPS.filter(function(o){return o.status==='go'}).reduce(function(t,o){return t+(Number(o.est_investment)||0)},0);}
+function renderFunds(){
+  var committed=committedTotal();
+  var thisYear=new Date().getFullYear();
+  var cur=FUNDS.find(function(f){return f.year===thisYear})||FUNDS[0]||{year:thisYear,funds:0};
+  var remaining=cur.funds-committed;
+  var pct=cur.funds>0?Math.min(committed/cur.funds*100,100):0;
+  document.getElementById('fundsSummary').innerHTML=
+   '<div style="font-size:26px;font-weight:800;margin-top:6px">US$'+committed.toFixed(1)+'M</div>'
+   +'<div style="font-size:11px;color:#B9C7D8">committed (projects in progress)</div>'
+   +'<div style="height:9px;background:rgba(255,255,255,.18);border-radius:99px;margin-top:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+(remaining<0?'#E58E88':'#D9A441')+';border-radius:99px"></div></div>'
+   +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:6px"><span>of US$'+Number(cur.funds).toFixed(1)+'M available '+cur.year+'</span>'
+   +'<b style="color:'+(remaining<0?'#E58E88':'#9CC5A8')+'">'+(remaining<0?'OVER BY US$'+Math.abs(remaining).toFixed(1)+'M':'US$'+remaining.toFixed(1)+'M free')+'</b></div>'
+   +(FUNDS.filter(function(f){return f.year>cur.year}).map(function(f){return '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px;color:#B9C7D8"><span>'+f.year+'</span><span>US$'+Number(f.funds).toFixed(1)+'M planned</span></div>'}).join(''));
+  document.getElementById('fundsRows').innerHTML=FUNDS.map(function(f){
+   return '<div style="display:flex;gap:8px;align-items:center;margin:5px 0;font-size:13px"><b style="width:44px">'+f.year+'</b>'
+    +'<input type="number" step="0.5" value="'+f.funds+'" style="flex:1;padding:6px 9px;border:1.5px solid var(--line);border-radius:7px;font-size:13px" onchange="saveFund('+f.year+',this.value)">'
+    +'<a style="color:#B3403A;cursor:pointer;font-weight:800" onclick="delFund('+f.year+')">×</a></div>';}).join('')||'<div style="font-size:11.5px;color:#8A98A8">No years set.</div>';
+}
+async function loadFunds(){try{var r=await fetch('/api/funds',{headers:{Authorization:'Bearer '+token}});if(r.ok)FUNDS=((await r.json()).funds||[]);}catch(e){}renderFunds();}
+async function saveFund(y,v){await fetch('/api/funds',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({year:y,funds:Number(v)||0})});loadFunds();}
+async function delFund(y){await fetch('/api/funds?year='+y,{method:'DELETE',headers:{Authorization:'Bearer '+token}});loadFunds();}
+async function addFundYear(){var y=prompt('Year:',String(new Date().getFullYear()+1));if(!y)return;await saveFund(Number(y),0);}
+
+function viabChip(o){
+  if(!o.viability||!o.viability.outputs)return '<span style="font-size:10px;color:#8A98A8">no viability check yet</span>';
+  var v=o.viability.outputs;
+  return '<span style="font-size:10px;font-weight:700;background:#E7F2EB;color:var(--green);border-radius:5px;padding:2px 7px">✓ VIABILITY — rev US$'+(v.revenueUSD/1e6).toFixed(1)+'M · max inv US$'+(v.maxInvestmentUSD/1e6).toFixed(1)+'M</span> <span style="font-size:9.5px;color:#8A98A8">'+(o.viability.date||'')+'</span>';
+}
+function oppCard(o,isOA){
+  var pct=scoreOf(o);
+  return '<div class="card"><div class="chead"><div><div class="oname">'+o.name+'</div>'
+   +'<div class="ocity">📍 '+o.city+' · <span class="typechip">'+(o.otype||'').replace('-',' ').toUpperCase()+'</span>'+(o.sponsor?' · '+o.sponsor:'')+'</div></div>'
+   +'<span class="status s-'+o.status+'">'+(STATUS_LBL[o.status]||o.status)+'</span></div>'
+   +(o.objective?'<div class="odesc">'+o.objective+'</div>':'<div class="odesc"></div>')
+   +'<div class="ofacts">'+(o.est_investment!=null?('<span>💰 ~US$'+Number(o.est_investment).toFixed(1)+'M</span>'):'')
+   +(o.est_timeline?('<span>⏱ '+o.est_timeline+'</span>'):'')+'<span>'+viabChip(o)+'</span></div>'
+   +bar(pct)
+   +'<div class="rowb"><button class="btn ghost" onclick=\'openEdit('+o.id+')\'>Open assessment</button>'
+   +(isOA?'<button class="btn ghost" onclick="runViability('+o.id+')">Viability check →</button>':'')
+   +(isOA?'<button class="btn" style="background:var(--steel)" onclick="openScore('+o.id+')">Score (review)</button>':'')
+   +(isOA&&pct!=null?'<button class="btn green" onclick="gateGo('+o.id+')">GO → project</button>':'')
+   +(o.status==='go'?'<button class="btn ghost" onclick="location.href=\'model.html\'">Open model →</button>':'')
+   +(isOA&&o.status!=='parked'?'<button class="btn ghost" onclick="setStatus('+o.id+',\'parked\')">Park</button>':'')
+   +(o.status==='parked'?'<button class="btn ghost" onclick="setStatus('+o.id+',\'proposed\')">Unpark</button>':'')
+   +'</div></div>';
+}
 function renderAll(){
-  renderWeights();
+  renderWeights();renderFunds();
   document.getElementById('empty').style.display=OPPS.length?'none':'block';
+  var inProg=OPPS.filter(function(o){return o.status==='go'});
+  var oas=OPPS.filter(function(o){return o.status!=='go'});
+  var oaSorted=oas.slice().sort(function(a,b){
+    var pa=scoreOf(a),pb=scoreOf(b);
+    if(a.status==='parked'&&b.status!=='parked')return 1;
+    if(b.status==='parked'&&a.status!=='parked')return -1;
+    return (pb!=null?pb:-1)-(pa!=null?pa:-1);
+  });
   // cards
-  document.getElementById('cardsView').innerHTML=OPPS.map(function(o){
-    var pct=scoreOf(o);
-    return '<div class="card"><div class="chead"><div><div class="oname">'+o.name+'</div>'
-     +'<div class="ocity">📍 '+o.city+' · <span class="typechip">'+(o.otype||'').replace('-',' ').toUpperCase()+'</span>'+(o.sponsor?' · '+o.sponsor:'')+'</div></div>'
-     +'<span class="status s-'+o.status+'">'+(STATUS_LBL[o.status]||o.status)+'</span></div>'
-     +(o.objective?'<div class="odesc">'+o.objective+'</div>':'<div class="odesc"></div>')
-     +'<div class="ofacts">'+(o.est_investment!=null?('<span>💰 ~US$'+Number(o.est_investment).toFixed(1)+'M</span>'):'')
-     +(o.est_timeline?('<span>⏱ '+o.est_timeline+'</span>'):'')+'</div>'
-     +bar(pct)
-     +'<div class="rowb"><button class="btn ghost" onclick=\'openEdit('+o.id+')\'>Open assessment</button>'
-     +(o.status!=='go'?'<button class="btn green" onclick="gateGo('+o.id+')">GO → project</button>':'<button class="btn ghost" onclick="location.href=\'model.html\'">Open model →</button>')
-     +(o.status!=='parked'&&o.status!=='go'?'<button class="btn ghost" onclick="setStatus('+o.id+',\'parked\')">Park</button>':'')
-     +(o.status==='parked'?'<button class="btn ghost" onclick="setStatus('+o.id+',\'scored\')">Unpark</button>':'')
-     +'</div></div>';
-  }).join('');
-  // ranking
-  var ranked=OPPS.slice().map(function(o){return{o:o,pct:scoreOf(o)}}).sort(function(a,b){return (b.pct||-1)-(a.pct||-1)});
-  document.getElementById('rankView').innerHTML='<table><tr><th></th><th>OPPORTUNITY</th><th>CITY</th><th>SCORE</th><th>EST. INV</th><th>STATUS</th></tr>'
-   +ranked.map(function(r,i){
-     return '<tr><td class="rank">'+(r.pct!=null?('#'+(i+1)):'—')+'</td>'
+  document.getElementById('cardsView').innerHTML=
+   '<div class="sect">IN PROGRESS — APPROVED PROJECTS <span class="n">'+inProg.length+'</span></div>'
+   +(inProg.length?('<div class="grid">'+inProg.map(function(o){return oppCard(o,false)}).join('')+'</div>'):'<div style="font-size:12.5px;color:#8A98A8;margin-top:8px">Nothing in progress yet.</div>')
+   +'<div class="sect">OPPORTUNITY ASSESSMENTS — SCORED CLIMB, UNSCORED WAIT <span class="n">'+oas.length+'</span></div>'
+   +(oas.length?('<div class="grid">'+oaSorted.map(function(o){return oppCard(o,true)}).join('')+'</div>'):'<div style="font-size:12.5px;color:#8A98A8;margin-top:8px">No open assessments.</div>');
+  // ranking table: in progress pinned, then scored OAs, then unscored
+  var ranked=inProg.map(function(o){return{o:o,pct:scoreOf(o),pin:true}})
+    .concat(oaSorted.map(function(o){return{o:o,pct:scoreOf(o),pin:false}}));
+  var rk=0;
+  document.getElementById('rankView').innerHTML='<table><tr><th></th><th>OPPORTUNITY</th><th>CITY</th><th>SCORE</th><th>EST. INV</th><th>VIABILITY</th><th>STATUS</th></tr>'
+   +ranked.map(function(r){
+     var lab=r.pin?'▶':(r.pct!=null?('#'+(++rk)):'—');
+     return '<tr'+(r.pin?' style="background:#F6F9FC"':'')+'><td class="rank">'+lab+'</td>'
       +'<td><b>'+r.o.name+'</b><div style="font-size:11px;color:var(--muted)">'+(r.o.strategic_link||'')+'</div></td>'
-      +'<td>'+r.o.city+'</td><td style="min-width:170px">'+bar(r.pct)+'</td>'
+      +'<td>'+r.o.city+'</td><td style="min-width:150px">'+bar(r.pct)+'</td>'
       +'<td>'+(r.o.est_investment!=null?('US$'+Number(r.o.est_investment).toFixed(1)+'M'):'—')+'</td>'
+      +'<td>'+(r.o.viability?'✓':'—')+'</td>'
       +'<td><span class="status s-'+r.o.status+'">'+(STATUS_LBL[r.o.status]||r.o.status)+'</span></td></tr>';
    }).join('')+'</table>'
-   +'<div style="font-size:11px;color:#8A98A8;margin-top:10px">Scores are weighted composites (0–100) of the five criteria — same rules for every opportunity. Unscored opportunities sink to the bottom until someone does the assessment.</div>';
+   +'<div style="font-size:11px;color:#8A98A8;margin-top:10px">▶ In-progress projects hold their committed funds. New OAs enter unscored at the bottom; the portfolio review scores them and they climb.</div>';
 }
-
-// ---- dynamic assessment rows ----
-function riskRow(r){r=r||{};return '<div style="display:grid;grid-template-columns:1.2fr .6fr 1.6fr 24px;gap:6px;margin:5px 0" class="riskrow">'
- +'<input placeholder="Risk (e.g. Creative)" value="'+(r.risk||'')+'" data-f="risk">'
- +'<select data-f="level"><option'+(r.level==='low'?' selected':'')+'>low</option><option'+(r.level==='medium'?' selected':'')+'>medium</option><option'+(r.level==='high'?' selected':'')+'>high</option></select>'
- +'<input placeholder="Strategy (e.g. proven creative team)" value="'+(r.strategy||'')+'" data-f="strategy">'
- +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove()">×</a></div>';}
-function addRisk(r){document.getElementById('riskRows').insertAdjacentHTML('beforeend',riskRow(r));}
-function estRow(e){e=e||{};return '<div style="display:grid;grid-template-columns:1.6fr .6fr 1.6fr 24px;gap:6px;margin:5px 0" class="estrow">'
- +'<input placeholder="Topic (e.g. Production)" value="'+(e.topic||'')+'" data-f="topic">'
- +'<input type="number" step="1000" placeholder="$" value="'+(e.cost!=null?e.cost:'')+'" data-f="cost" onchange="estTotal()">'
- +'<input placeholder="Remark (front/back end, contingency…)" value="'+(e.remark||'')+'" data-f="remark">'
- +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove();estTotal()">×</a></div>';}
-function addEst(e){document.getElementById('estRows').insertAdjacentHTML('beforeend',estRow(e));estTotal();}
-function estTotal(){var t=0;document.querySelectorAll('#estRows [data-f=cost]').forEach(function(i){t+=Number(i.value)||0});
- document.getElementById('estTotal').textContent=t?('Planned total: '+t.toLocaleString('en-US')):'';}
-function schedRow(x){x=x||{};return '<div style="display:grid;grid-template-columns:1.6fr .8fr 1.6fr 24px;gap:6px;margin:5px 0" class="schedrow">'
- +'<input placeholder="Activity (e.g. Secure rights)" value="'+(x.activity||'')+'" data-f="activity">'
- +'<input placeholder="Target" value="'+(x.target||'')+'" data-f="target">'
- +'<input placeholder="Remark" value="'+(x.remark||'')+'" data-f="remark">'
- +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove()">×</a></div>';}
-function addSched(x){document.getElementById('schedRows').insertAdjacentHTML('beforeend',schedRow(x));}
-var CASE_ROWS=[['ticketing','Revenue — ticketing'],['sponsors','Revenue — sponsors'],['other','Revenue — other'],['cost','Total cost']];
-function renderCase(cs){cs=cs||{};
- var t=document.getElementById('caseTable');
- t.innerHTML='<tr><th></th><th>BEST</th><th>MOST PROBABLE</th><th>WORST</th><th>ASSUMPTIONS</th></tr>'
-  +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};
-   return '<tr data-row="'+rw[0]+'"><td style="font-weight:700;font-size:12px">'+rw[1]+'</td>'
-    +['best','probable','worst'].map(function(k){return '<td><input type="number" style="width:92px;padding:5px" value="'+(v[k]!=null?v[k]:'')+'" data-k="'+k+'" onchange="caseProfit()"></td>';}).join('')
-    +'<td><input style="width:100%;min-width:120px;padding:5px" value="'+(v.assumptions||'')+'" data-k="assumptions"></td></tr>';}).join('')
-  +'<tr id="profitRow"><td style="font-weight:800;color:var(--navy)">Profit</td><td></td><td></td><td></td><td style="font-size:11px;color:var(--muted)">computed</td></tr>';
- caseProfit();
-}
-function caseGet(){var cs={};document.querySelectorAll('#caseTable tr[data-row]').forEach(function(tr){
-  var o={};tr.querySelectorAll('input').forEach(function(i){o[i.dataset.k]=i.dataset.k==='assumptions'?i.value:(i.value===''?null:Number(i.value));});
-  cs[tr.dataset.row]=o;});return cs;}
-function caseProfit(){var cs=caseGet();var cells=document.querySelectorAll('#profitRow td');
- ['best','probable','worst'].forEach(function(k,i){
-  var rev=(cs.ticketing&&cs.ticketing[k]||0)+(cs.sponsors&&cs.sponsors[k]||0)+(cs.other&&cs.other[k]||0);
-  var cost=cs.cost&&cs.cost[k]||0;var p=rev-cost;
-  cells[i+1].innerHTML='<b style="color:'+(p>=0?'var(--green)':'var(--red)')+'">'+(rev||cost?p.toLocaleString('en-US'):'—')+'</b>';});}
-function rowsGet(sel){var out=[];document.querySelectorAll(sel).forEach(function(row){
-  var o={};row.querySelectorAll('[data-f]').forEach(function(i){o[i.dataset.f]=i.value;});
-  if(Object.values(o).some(function(v){return v&&String(v).trim()}))out.push(o);});return out;}
-
 function critInputs(scores){
   return CRITERIA.map(function(c,i){
     var v=scores&&scores[c.key]!=null?scores[c.key]:'';
@@ -300,7 +329,6 @@ function openNew(){editing=null;document.getElementById('mtitle').textContent='N
   document.getElementById('estRows').innerHTML='';addEst();addEst();
   document.getElementById('schedRows').innerHTML='';addSched();addSched();
   renderCase(null);
-  document.getElementById('critRows').innerHTML=critInputs(null);
   document.getElementById('modal').style.display='flex';}
 function openEdit(id){
   var o=OPPS.find(function(x){return x.id===id});if(!o)return;
@@ -319,13 +347,9 @@ function openEdit(id){
   document.getElementById('estRows').innerHTML='';(a.estimate&&a.estimate.length?a.estimate:[{},{}]).forEach(function(e){addEst(e)});
   document.getElementById('schedRows').innerHTML='';(a.schedule&&a.schedule.length?a.schedule:[{},{}]).forEach(addSched);
   renderCase(a.case);
-  document.getElementById('critRows').innerHTML=critInputs(o.scores);
   document.getElementById('modal').style.display='flex';}
 function closeModal(){document.getElementById('modal').style.display='none';}
-function collectScores(){
-  var s={};document.querySelectorAll('#critRows input[type=range]').forEach(function(r){s[r.dataset.k]=Number(r.value);});
-  return s;
-}
+
 async function saveOpp(){
   var estRows=rowsGet('#estRows .estrow');
   var estSum=estRows.reduce(function(t,e){return t+(Number(e.cost)||0)},0);
@@ -339,11 +363,10 @@ async function saveOpp(){
     otype:document.getElementById('f_type').value,sponsor:document.getElementById('f_sponsor').value.trim(),
     est_investment:estSum?estSum/1e6:null,
     est_timeline:document.getElementById('f_time').value.trim(),objective:document.getElementById('f_intro').value.trim().slice(0,300),
-    strategic_link:document.getElementById('f_success').value.trim().slice(0,200),scores:collectScores(),assessment:assessment};
+    strategic_link:document.getElementById('f_success').value.trim().slice(0,200),assessment:assessment};
   if(!body.name){toast('Name required.');return;}
-  var hasScores=Object.values(body.scores).some(function(v){return v>0});
   try{
-    var method='POST';if(editing){body.id=editing.id;method='PATCH';if(hasScores&&editing.status==='proposed')body.status='scored';}
+    var method='POST';if(editing){body.id=editing.id;method='PATCH';}
     var r=await fetch('/api/opportunities',{method:method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)});
     if(!r.ok)throw new Error((await r.json()).error||r.status);
     closeModal();load();toast('Charter saved.');
@@ -376,12 +399,37 @@ function printAssessment(){
    +'<p style="margin-top:5px"><b>Financing</b> — Front end: '+(g('f_finfront')||'—')+' · Back end: '+(g('f_finback')||'—')+' · Credits: '+(g('f_fincredits')||'—')+'</p>'
    +'<h4>DRAFT SCHEDULE (GUIDE)</h4>'
    +'<table><tr><th>Activity</th><th>Target</th><th>Remark</th></tr>'+sched.map(function(x){return '<tr><td>'+x.activity+'</td><td>'+x.target+'</td><td>'+x.remark+'</td></tr>';}).join('')+'</table>'
+   +(o.viability&&o.viability.outputs?('<h4>VIABILITY CHECK — BUSINESS MODEL ('+(o.viability.city||'')+', '+(o.viability.date||'')+')</h4>'
+   +'<p>Revenue US$'+(o.viability.outputs.revenueUSD/1e6).toFixed(1)+'M/yr · Opex ceiling US$'+(o.viability.outputs.opexCeilingUSD/1e6).toFixed(1)+'M/yr · <b>Max production investment US$'+(o.viability.outputs.maxInvestmentUSD/1e6).toFixed(1)+'M</b> · '+o.viability.inputs.seats.toLocaleString('en-US')+' seats · '+o.viability.inputs.shows+' shows/yr · '+(o.viability.inputs.occupancy*100).toFixed(0)+'% occupancy</p>'):'')
    +'<h4>8.0 CASE</h4>'
    +'<table><tr><th></th><th>Best</th><th>Most probable</th><th>Worst</th><th>Assumptions</th></tr>'
    +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};return '<tr><td>'+rw[1]+'</td><td>'+(v.best!=null?v.best.toLocaleString('en-US'):'—')+'</td><td>'+(v.probable!=null?v.probable.toLocaleString('en-US'):'—')+'</td><td>'+(v.worst!=null?v.worst.toLocaleString('en-US'):'—')+'</td><td>'+(v.assumptions||'')+'</td></tr>';}).join('')
    +'<tr><th>Profit</th><th>'+prof.best.toLocaleString('en-US')+'</th><th>'+prof.probable.toLocaleString('en-US')+'</th><th>'+prof.worst.toLocaleString('en-US')+'</th><td></td></tr></table>'
    +'<p style="margin-top:12px;font-size:9.5px;color:#8A98A8">Sun Group Entertainment (GSM) · CEO Toolbox — Decision Portfolio · Opportunity Assessment (Initiation) · Panda Projet Inc.</p>';
   window.print();
+}
+function runViability(id){
+  var o=OPPS.find(function(x){return x.id===id});if(!o)return;
+  var c=o.city==='Vietnam'?'Ho Chi Minh City':o.city;
+  location.href='model.html?city='+encodeURIComponent(c)+'&opp='+id+'&oname='+encodeURIComponent(o.name);
+}
+function openScore(id){
+  var o=OPPS.find(function(x){return x.id===id});if(!o)return;
+  editing=o;
+  var div=document.getElementById('scoreModal');
+  document.getElementById('scoreTitle').textContent='Portfolio review — '+o.name;
+  document.getElementById('scoreRows').innerHTML=critInputs(o.scores);
+  div.style.display='flex';
+}
+async function saveScore(){
+  var scores={};document.querySelectorAll('#scoreRows input[type=range]').forEach(function(r){scores[r.dataset.k]=Number(r.value);});
+  var hasScores=Object.values(scores).some(function(v){return v>0});
+  try{
+    var r=await fetch('/api/opportunities',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({id:editing.id,scores:scores,status:hasScores?'scored':editing.status})});
+    if(!r.ok)throw new Error((await r.json()).error||r.status);
+    document.getElementById('scoreModal').style.display='none';load();toast('Scored — it climbs the portfolio.');
+  }catch(e){toast('Score failed: '+e.message);}
 }
 async function setStatus(id,status){
   await fetch('/api/opportunities',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({id:id,status:status})});
@@ -407,7 +455,7 @@ async function load(){
     renderAll();
   }catch(e){toast('Could not load portfolio — '+e.message);}
 }
-load();
+load();loadFunds();
 </script>
 </body>
 </html>

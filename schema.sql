@@ -103,10 +103,19 @@ CREATE TABLE IF NOT EXISTS opportunities (
   est_timeline VARCHAR(60),
   scores JSONB DEFAULT '{}',                 -- {strategic:0-5, market:0-5, financial:0-5, capability:0-5, risk:0-5}
   assessment JSONB DEFAULT '{}',             -- full BD Opportunity Assessment (intro, benefits, scope, constraints, success, risks[], estimate[], financing, schedule[], case)
+  viability JSONB DEFAULT NULL,              -- attached Business Model viability check {city, inputs, outputs, date}
   status VARCHAR(20) DEFAULT 'proposed',     -- proposed | scored | go | parked | rejected
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ============ PORTFOLIO FUNDS (investment envelope per year) ============
+CREATE TABLE IF NOT EXISTS portfolio_funds (
+  year INTEGER PRIMARY KEY,
+  funds NUMERIC NOT NULL DEFAULT 0            -- US$M available for the year
+);
+INSERT INTO portfolio_funds (year, funds) VALUES (2026, 10), (2027, 15), (2028, 15)
+ON CONFLICT (year) DO NOTHING;
 
 -- Example charters (demo seeds — delete freely)
 INSERT INTO opportunities (name, city, otype, sponsor, objective, strategic_link, est_investment, est_timeline, scores, status)
