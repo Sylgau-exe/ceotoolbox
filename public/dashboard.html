@@ -111,7 +111,7 @@
 <footer>Confidential · Sun Group Entertainment (GSM) · Indicator base: Neon PostgreSQL · Collection: scheduled AI job (monthly + on-demand)</footer>
 
 <script>
-window.onerror=function(m){try{showAlert('Unexpected error: '+m,true)}catch(_){}}
+window.onerror=function(m){if(/ResizeObserver/i.test(String(m)))return true;try{showAlert('Unexpected error: '+m,true)}catch(_){}}
 window.onunhandledrejection=function(ev){console.error(ev.reason)}
 var token=localStorage.getItem('auth_token');
 if(!token){location.href='index.html';}

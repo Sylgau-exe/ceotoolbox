@@ -67,7 +67,7 @@
   <div id="diagram"></div>
 </main>
 <script>
-window.onerror=function(m){console.error(m)}
+window.onerror=function(m){if(/ResizeObserver/i.test(String(m)))return true;console.error(m)}
 var token=localStorage.getItem('auth_token');
 if(!token){location.href='index.html';}
 function signOut(){localStorage.removeItem('auth_token');localStorage.removeItem('user');location.href='index.html';}

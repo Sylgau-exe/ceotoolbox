@@ -105,7 +105,7 @@
 </main>
 <footer>Confidential · Sun Group Entertainment (GSM) · Built by Panda Projet Inc.</footer>
 <script>
-window.onerror=function(m){try{alert('Unexpected error: '+m)}catch(_){}}
+window.onerror=function(m){if(/ResizeObserver/i.test(String(m)))return true;try{alert('Unexpected error: '+m)}catch(_){}}
 window.onunhandledrejection=function(ev){console.error(ev.reason)}
 var token=localStorage.getItem('auth_token');
 if(!token){location.href='index.html';}

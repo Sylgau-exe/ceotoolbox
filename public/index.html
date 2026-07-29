@@ -50,8 +50,8 @@
 </div>
 
 <script>
-window.onerror=function(m,s,l,c,e){try{showError('Unexpected error: '+m)}catch(_){}}
-window.onunhandledrejection=function(ev){try{showError('Unexpected error: '+(ev.reason&&ev.reason.message||ev.reason))}catch(_){}}
+window.onerror=function(m,s,l,c,e){if(/ResizeObserver/i.test(String(m)))return true;try{showError('Unexpected error: '+m)}catch(_){}}
+window.onunhandledrejection=function(ev){if(/ResizeObserver/i.test(String(ev&&ev.reason)))return;try{showError('Unexpected error: '+(ev.reason&&ev.reason.message||ev.reason))}catch(_){}}
 
 var mode='login';
 if(localStorage.getItem('auth_token')){location.href='app.html';}
