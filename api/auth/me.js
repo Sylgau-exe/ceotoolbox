@@ -15,9 +15,11 @@ export default async function handler(req, res) {
     const user = await UserDB.findById(decoded.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const assessments = await sql`
-      SELECT COUNT(*) as count FROM assessment_results WHERE user_id = ${user.id}
-    `;
+    let scenarioCount = 0;
+    try {
+      const sc = await sql`SELECT COUNT(*) as count FROM scenarios WHERE user_id = ${user.id}`;
+      scenarioCount = parseInt(sc.rows[0].count) || 0;
+    } catch (e) { /* table may not exist yet */ }
 
     return res.status(200).json({
       user: {
@@ -29,7 +31,7 @@ export default async function handler(req, res) {
         isAdmin: user.is_admin,
         authProvider: user.auth_provider,
         createdAt: user.created_at,
-        assessmentCount: parseInt(assessments.rows[0].count)
+        assessmentCount: scenarioCount
       }
     });
   } catch (error) {

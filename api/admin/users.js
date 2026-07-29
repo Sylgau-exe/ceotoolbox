@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       LEFT JOIN (
         SELECT user_id, COUNT(*) as assessment_count, 
                MAX(created_at) as last_assessment,
-               ROUND(AVG(overall_score)::numeric, 0) as avg_score
+               NULL::numeric as avg_score
         FROM scenarios GROUP BY user_id
       ) a ON u.id = a.user_id
       ORDER BY u.created_at DESC
