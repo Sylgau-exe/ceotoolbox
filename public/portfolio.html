@@ -126,7 +126,7 @@
         </div>
       </div>
       <div id="ganttPanel" style="display:none;background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:16px">
-        <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">PROJECT STATUS BOARD — WHERE EACH ITEM STANDS · same toggles as the cash view
+        <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">PROJECT STATUS BOARD — WHERE EVERYTHING STANDS · opportunities wait in Initiation
           <a href="roadmap.html?m=pm" style="display:inline-block;margin-left:8px;font-size:9px;font-weight:800;letter-spacing:.7px;background:#FBF3E1;color:#8A5A00;border:1px solid #EAD9AE;border-radius:99px;padding:2px 9px;text-decoration:none;vertical-align:1px">DETAIL → PROJECT MANAGEMENT MODULE</a></div>
         <div id="ganttChart" style="margin-top:12px"></div>
       </div>
@@ -583,7 +583,7 @@ function pfCashSVG(y0,cur,scen){
 function renderGantt(){
   var panel=document.getElementById('ganttPanel');if(!panel)return;
   if(ROLE!=='pm'){panel.style.display='none';return;}
-  var items=OPPS.filter(function(o){return SCEN[o.id]});
+  var items=OPPS.filter(function(o){return o.status!=='rejected'});
   if(!items.length){panel.style.display='none';return;}
   panel.style.display='block';
   var PHASES=[
@@ -626,7 +626,7 @@ function renderGantt(){
     cols[pi].forEach(function(e){
       var o=e.o,st=e.st;
       var hot=st.cashPct>st.pct+5, cold=st.cashPct<st.pct-5;
-      var chip = o.status!=='go' ? '<span style="font-size:9px;color:#8A98A8">not started — OA</span>'
+      var chip = o.status!=='go' ? '<span style="font-size:9px;color:#8A98A8">'+(o.status==='parked'?'parked — OA':'not started — OA')+(SCEN[o.id]?' · <b style=\"color:#B58121\">in cash scenario</b>':'')+'</span>'
        : (st.phase===4 ? '<span style="font-size:9px;font-weight:700;color:var(--green)">opened · US$'+st.net.toFixed(1)+'M/yr</span>'
        : '<span style="font-size:9px;font-weight:700;color:'+(hot?'var(--red)':(cold?'var(--green)':'var(--steel)'))+'">time '+st.pct+'% · cash '+st.cashPct+'%'+(hot?' ⚠':'')+'</span>');
       html+='<div style="background:#fff;border:1px solid '+(o.status==='go'?'#C4DECF':'var(--line)')+';border-radius:9px;padding:9px 10px;margin-bottom:7px">'
@@ -643,7 +643,7 @@ function renderGantt(){
   });
   html+='</div>';
   document.getElementById('ganttChart').innerHTML=html
-   +'<div style="font-size:11px;color:#8A98A8;margin-top:9px;line-height:1.5">Read left to right: opportunities wait in Initiation; approved projects advance through the phases to Operation. <b style="color:var(--red)">cash % ahead of time % ⚠</b> = burning faster than progressing.'
+   +'<div style="font-size:11px;color:#8A98A8;margin-top:9px;line-height:1.5">The whole portfolio, left to right: every open opportunity waits in Initiation (amber border = included in the cash scenario above); approved projects advance through the phases to Operation. <b style="color:var(--red)">cash % ahead of time % ⚠</b> = burning faster than progressing.'
    +(anyFict?' <b>Positions and spend are illustrative</b> — actuals come from the <b>Project Management module</b>.':'')+'</div>';
 }
 function renderPortfolioCash(){
