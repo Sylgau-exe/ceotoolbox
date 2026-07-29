@@ -173,7 +173,7 @@
       <div><label>Source of financing — front end</label><input id="f_finfront" placeholder="Producer, sponsors"></div>
       <div><label>Back end</label><input id="f_finback" placeholder="Ticketing, F&amp;B, merchandising"></div>
       <div><label>Credits / other</label><input id="f_fincredits" placeholder="Tax credits, incentives"></div>
-      <div><label>Overall timeline (guide)</label><input id="f_time" placeholder="12 months to event"></div>
+      <div><label>Overall timeline (guide)</label><input id="f_time" placeholder="12 months to event" onchange="renderCashChart()"></div>
     </div>
     <label style="margin-top:10px">Draft schedule — key activities</label>
     <div id="schedRows"></div>
@@ -183,6 +183,9 @@
     <div style="overflow-x:auto"><table style="margin-top:8px;border:1px solid var(--line)" id="caseTable">
       <tr><th></th><th>BEST</th><th>MOST PROBABLE</th><th>WORST</th><th>ASSUMPTIONS</th></tr>
     </table></div>
+
+    <div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--steel);margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:4px">CASH VIEW — 5 YEARS</div>
+    <div id="cashChart" style="margin-top:10px"></div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -411,7 +414,7 @@ function estRow(e){e=e||{};return '<div style="display:grid;grid-template-column
  +'<input placeholder="Remark (front/back end, contingency…)" value="'+(e.remark||'')+'" data-f="remark">'
  +'<a style="cursor:pointer;color:#B3403A;font-weight:800;text-align:center;line-height:34px" onclick="this.parentElement.remove();estTotal()">×</a></div>';}
 function addEst(e){document.getElementById('estRows').insertAdjacentHTML('beforeend',estRow(e));estTotal();}
-function estTotal(){var t=0;document.querySelectorAll('#estRows [data-f=cost]').forEach(function(i){t+=Number(i.value)||0});
+function estTotal(){renderCashChart();var t=0;document.querySelectorAll('#estRows [data-f=cost]').forEach(function(i){t+=Number(i.value)||0});
  document.getElementById('estTotal').textContent=t?('Planned total: '+t.toLocaleString('en-US')):'';}
 function schedRow(x){x=x||{};return '<div style="display:grid;grid-template-columns:1.6fr .8fr 1.6fr 24px;gap:6px;margin:5px 0" class="schedrow">'
  +'<input placeholder="Activity (e.g. Secure rights)" value="'+(x.activity||'')+'" data-f="activity">'
@@ -433,7 +436,7 @@ function renderCase(cs){cs=cs||{};
 function caseGet(){var cs={};document.querySelectorAll('#caseTable tr[data-row]').forEach(function(tr){
   var o={};tr.querySelectorAll('input').forEach(function(i){o[i.dataset.k]=i.dataset.k==='assumptions'?i.value:(i.value===''?null:Number(i.value));});
   cs[tr.dataset.row]=o;});return cs;}
-function caseProfit(){var cs=caseGet();var cells=document.querySelectorAll('#profitRow td');
+function caseProfit(){renderCashChart();var cs=caseGet();var cells=document.querySelectorAll('#profitRow td');
  ['best','probable','worst'].forEach(function(k,i){
   var rev=(cs.ticketing&&cs.ticketing[k]||0)+(cs.sponsors&&cs.sponsors[k]||0)+(cs.other&&cs.other[k]||0);
   var cost=cs.cost&&cs.cost[k]||0;var p=rev-cost;
@@ -441,6 +444,63 @@ function caseProfit(){var cs=caseGet();var cells=document.querySelectorAll('#pro
 function rowsGet(sel){var out=[];document.querySelectorAll(sel).forEach(function(row){
   var o={};row.querySelectorAll('[data-f]').forEach(function(i){o[i.dataset.f]=i.value;});
   if(Object.values(o).some(function(v){return v&&String(v).trim()}))out.push(o);});return out;}
+function cashData(){
+  var y0=new Date().getFullYear();
+  var committed=committedTotal();
+  var fundsFor=function(y){var f=FUNDS.find(function(x){return x.year===y});if(f)return Number(f.funds);var last=FUNDS.filter(function(x){return x.year<y}).pop();return last?Number(last.funds):0;};
+  // OA figures — prefer attached viability; else estimate + probable case
+  var v=editing&&editing.viability&&editing.viability.outputs?editing.viability.outputs:null;
+  var estSum=0;document.querySelectorAll('#estRows [data-f=cost]').forEach(function(i){estSum+=Number(i.value)||0});
+  var oaInv=v?v.maxInvestmentUSD/1e6:(estSum/1e6);
+  var annualNet;
+  if(v){annualNet=(v.revenueUSD-v.opexCeilingUSD)/1e6;}
+  else{var cs=caseGet();annualNet=(((cs.ticketing&&cs.ticketing.probable)||0)+((cs.sponsors&&cs.sponsors.probable)||0)+((cs.other&&cs.other.probable)||0)-((cs.cost&&cs.cost.probable)||0))/1e6;}
+  var tl=(document.getElementById('f_time')?document.getElementById('f_time').value:'')||'';
+  var mMatch=tl.match(/\d+/);var months=mMatch?Number(mMatch[0]):12;if(/year/i.test(tl)&&mMatch)months=Number(mMatch[0])*12;
+  var buildYears=Math.max(1,Math.ceil(months/12));
+  var base=[],withOA=[],cumF=0;
+  for(var i=0;i<5;i++){
+    cumF+=fundsFor(y0+i);
+    base.push(cumF-(i>=0?committed:0));
+    var inv=Math.min(i+1,buildYears)/buildYears*oaInv;                    // investment spread over build years
+    var opYears=Math.max(0,i+1-buildYears);                                // operating years after build
+    withOA.push(base[i]-inv+annualNet*opYears);
+  }
+  return{y0:y0,base:base,withOA:withOA,oaInv:oaInv,annualNet:annualNet,buildYears:buildYears,src:v?'viability check':'OA estimate + probable case'};
+}
+function buildCashSVG(d){
+  var W=620,H=210,PL=52,PR=110,PT=16,PB=30;
+  var all=d.base.concat(d.withOA).concat([0]);
+  var min=Math.min.apply(null,all),max=Math.max.apply(null,all);
+  var span=(max-min)||1;min-=span*.1;max+=span*.1;
+  var X=function(i){return PL+i*(W-PL-PR)/4;};
+  var Y=function(v){return PT+(max-v)/(max-min)*(H-PT-PB);};
+  function path(a){return a.map(function(v,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);}).join(' ');}
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#F7F9FB;border:1px solid var(--line);border-radius:10px">';
+  // zero line + y labels
+  if(min<0&&max>0)svg+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="#B3403A" stroke-width="1" stroke-dasharray="2 3"/><text x="'+(PL-6)+'" y="'+(Y(0)+3)+'" text-anchor="end" font-size="9" fill="#B3403A">0</text>';
+  [max-span*0.1,min+span*0.1].forEach(function(v){svg+='<text x="'+(PL-6)+'" y="'+(Y(v)+3)+'" text-anchor="end" font-size="9" fill="#8A98A8">'+v.toFixed(0)+'M</text><line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#E2E8F0" stroke-width="1"/>';});
+  // x labels
+  for(var i=0;i<5;i++)svg+='<text x="'+X(i)+'" y="'+(H-10)+'" text-anchor="middle" font-size="9.5" fill="#64748B">'+(d.y0+i)+'</text>';
+  // lines
+  svg+='<path d="'+path(d.base)+'" fill="none" stroke="#3A6EA8" stroke-width="2.5" stroke-linecap="round"/>';
+  svg+='<path d="'+path(d.withOA)+'" fill="none" stroke="#B58121" stroke-width="2.5" stroke-dasharray="7 5" stroke-linecap="round"/>';
+  d.base.forEach(function(v,i){svg+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3" fill="#3A6EA8"/>';});
+  d.withOA.forEach(function(v,i){svg+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3" fill="#fff" stroke="#B58121" stroke-width="2"/>';});
+  // direct end labels
+  svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.base[4])+3)+'" font-size="10" font-weight="700" fill="#3A6EA8">Current · '+d.base[4].toFixed(1)+'M</text>';
+  svg+='<text x="'+(W-PR+8)+'" y="'+(Y(d.withOA[4])+3)+'" font-size="10" font-weight="700" fill="#B58121">+ Opportunity · '+d.withOA[4].toFixed(1)+'M</text>';
+  svg+='</svg>';
+  return svg;
+}
+function renderCashChart(){
+  var el=document.getElementById('cashChart');if(!el)return;
+  try{
+    var d=cashData();
+    el.innerHTML=buildCashSVG(d)
+     +'<div style="font-size:10.5px;color:#8A98A8;margin-top:6px;line-height:1.5">Cumulative portfolio cash (US$M): yearly funds − committed projects. <b style="color:#3A6EA8">━ current portfolio</b> · <b style="color:#B58121">╌ with this opportunity</b> — investment US$'+d.oaInv.toFixed(1)+'M over '+d.buildYears+' build year'+(d.buildYears>1?'s':'')+', then ~US$'+d.annualNet.toFixed(1)+'M/yr net (from '+d.src+').</div>';
+  }catch(e){el.innerHTML='';}
+}
 // ==================== END HELPERS ====================
 function critInputs(scores){
   return CRITERIA.map(function(c){
@@ -539,6 +599,7 @@ function printAssessment(){
    +'<table><tr><th>Activity</th><th>Target</th><th>Remark</th></tr>'+sched.map(function(x){return '<tr><td>'+x.activity+'</td><td>'+x.target+'</td><td>'+x.remark+'</td></tr>';}).join('')+'</table>'
    +(o.viability&&o.viability.outputs?('<h4>VIABILITY CHECK — BUSINESS MODEL ('+(o.viability.city||'')+', '+(o.viability.date||'')+')</h4>'
    +'<p>Revenue US$'+(o.viability.outputs.revenueUSD/1e6).toFixed(1)+'M/yr · Opex ceiling US$'+(o.viability.outputs.opexCeilingUSD/1e6).toFixed(1)+'M/yr · <b>Max production investment US$'+(o.viability.outputs.maxInvestmentUSD/1e6).toFixed(1)+'M</b> · '+o.viability.inputs.seats.toLocaleString('en-US')+' seats · '+o.viability.inputs.shows+' shows/yr · '+(o.viability.inputs.occupancy*100).toFixed(0)+'% occupancy</p>'):'')
+   +'<h4>CASH VIEW — 5 YEARS</h4>'+(function(){try{return buildCashSVG(cashData());}catch(e){return ''}})()
    +'<h4>8.0 CASE</h4>'
    +'<table><tr><th></th><th>Best</th><th>Most probable</th><th>Worst</th><th>Assumptions</th></tr>'
    +CASE_ROWS.map(function(rw){var v=cs[rw[0]]||{};return '<tr><td>'+rw[1]+'</td><td>'+(v.best!=null?v.best.toLocaleString('en-US'):'—')+'</td><td>'+(v.probable!=null?v.probable.toLocaleString('en-US'):'—')+'</td><td>'+(v.worst!=null?v.worst.toLocaleString('en-US'):'—')+'</td><td>'+(v.assumptions||'')+'</td></tr>';}).join('')
