@@ -109,7 +109,8 @@
       <div id="listView"></div>
       <div id="pfCashPanel" style="display:none;background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:22px">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
-          <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">CASH SCENARIO — 5 YEARS · how the portfolio burns the cash balance</div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">CASH SCENARIO — 5 YEARS · how the portfolio burns the cash balance
+            <a href="roadmap.html?m=cash" style="display:inline-block;margin-left:8px;font-size:9px;font-weight:800;letter-spacing:.7px;background:#FBF3E1;color:#8A5A00;border:1px solid #EAD9AE;border-radius:99px;padding:2px 9px;text-decoration:none;vertical-align:1px">DETAIL → CASH-TO-CASH MODULE</a></div>
           <div style="display:flex;gap:14px;align-items:center">
             <label style="font-size:11.5px;color:var(--muted);font-weight:700">Starting cash US$M
               <input type="number" id="startCash" step="0.5" style="width:74px;margin-left:6px;padding:6px 8px;border:1.5px solid var(--line);border-radius:7px;font-size:12.5px;text-align:right" onchange="setStartCash(this.value)"></label>
@@ -125,7 +126,8 @@
         </div>
       </div>
       <div id="ganttPanel" style="display:none;background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:16px">
-        <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">SCHEDULE SCENARIO — HIGH-LEVEL GANTT · same toggles as the cash view</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:1.1px;color:var(--steel)">SCHEDULE SCENARIO — HIGH-LEVEL GANTT · same toggles as the cash view
+          <a href="roadmap.html?m=pm" style="display:inline-block;margin-left:8px;font-size:9px;font-weight:800;letter-spacing:.7px;background:#FBF3E1;color:#8A5A00;border:1px solid #EAD9AE;border-radius:99px;padding:2px 9px;text-decoration:none;vertical-align:1px">DETAIL → PROJECT MANAGEMENT MODULE</a></div>
         <div id="ganttChart" style="margin-top:12px"></div>
       </div>
       <div class="empty" id="empty">No assessments yet — document the first opportunity.</div>
@@ -630,7 +632,7 @@ function renderGantt(){
    +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D9A441;vertical-align:-1px;margin-right:5px"></span>Opening night</span>';
   document.getElementById('ganttChart').innerHTML=svg
    +'<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:8px">'+legend+'</div>'
-   +'<div style="font-size:11px;color:#8A98A8;margin-top:6px;line-height:1.5">Phases split each item\'s pre-opening timeline (10 · 20 · 30 · 40%) — a planning default, refined per project in the <b>Project Management</b> module (see roadmap).</div>';
+   +'<div style="font-size:11px;color:#8A98A8;margin-top:6px;line-height:1.5">Phases split each item\'s pre-opening timeline (10 · 20 · 30 · 40%) — a planning default. Real per-project schedules, dependencies and vendor gates come from the <b>Project Management module</b>.</div>';
 }
 function renderPortfolioCash(){
   var panel=document.getElementById('pfCashPanel');if(!panel)return;
@@ -648,7 +650,7 @@ function renderPortfolioCash(){
      +'<div style="display:flex;gap:18px;font-size:11px;color:var(--muted);margin-top:7px;flex-wrap:wrap">'
      +'<span><span style="display:inline-block;width:26px;border-top:3px solid #B58121;vertical-align:middle;margin-right:6px"></span><b>Your scenario</b> (checked items)</span>'
      +'<span><span style="display:inline-block;width:26px;border-top:2px dashed #9AA8B8;vertical-align:middle;margin-right:6px"></span>Committed today (reference)</span>'
-     +'<span>Balance = starting cash − build spend + operating net. Yearly budget top-ups not auto-added — adjust starting cash to test funding levels.</span></div>';
+     +'<span>Balance = starting cash − build spend + operating net, yearly resolution. Yearly budget top-ups not auto-added — adjust starting cash to test funding levels. Month-by-month detail (presales, working capital, FX) comes from the <b>Cash-to-Cash model</b>.</span></div>';
     var minS=Math.min.apply(null,scen),minSI=scen.indexOf(minS);
     var minC=Math.min.apply(null,cur);
     function stat(lab,val,col){return '<div style="background:#F6F9FC;border:1px solid #DBE5EF;border-radius:9px;padding:8px 13px"><div style="font-size:9px;font-weight:800;letter-spacing:.7px;color:#8A98A8">'+lab+'</div><div style="font-size:16px;font-weight:800;color:'+(col||'var(--navy)')+'">'+val+'</div></div>';}
